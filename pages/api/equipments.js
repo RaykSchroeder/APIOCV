@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
+  if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
     return;
   }
@@ -12,12 +12,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    const apiRes = await fetch("https://api-eu.oceaview.com/public/api/v1/equipments", {
-      headers: {
-        "X-API-KEY": apiKey,
-        "Accept": "application/json"
+    const apiRes = await fetch(
+      "https://api-eu.oceaview.com/public/api/v1/equipments",
+      {
+        headers: {
+          "X-API-KEY": apiKey,
+          Accept: "application/json",
+        },
       }
-    });
+    );
 
     if (!apiRes.ok) {
       const errorData = await apiRes.json();
