@@ -11,11 +11,13 @@ export default async function handler(req, res) {
 
   try {
     console.log('API-Key erhalten:', apiKey);
+
     const response = await fetch('https://api-eu.oceaview.com/public/api/v1/equipments', {
       headers: { 'Authorization': `Bearer ${apiKey}` }
     });
 
     console.log('API-Response Status:', response.status);
+
     if (!response.ok) {
       const errText = await response.text();
       console.log('API-Fehler:', errText);
@@ -24,7 +26,19 @@ export default async function handler(req, res) {
     }
 
     const data = await response.json();
-    res.status(200).json({ equipments: data.equipments });
+
+    // Transformiere die Daten für das Frontend
+    const transformed = (data.equipments || []).map((eq) => ({
+      id: eq.id || 'Unbekannt',
+      name: eq.name || 'Unbekannt',
+      type: eq.type || 'Nicht angegeben',
+      sensors: (eq.sensors || []).map((s) => ({
+        type: s.type || 'Nicht angegeben',
+        values: s.values || {}
+      }))
+    }));
+
+    res.status(200).json({ equipments: transformed });
   } catch (error) {
     console.error('Fetch-Fehler:', error);
     res.status(500).json({ error: error.message || 'Fetch error' });
