@@ -1,37 +1,33 @@
-import fetch from "node-fetch";
+import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ message: "Method not allowed" });
-  }
-
-  const { apiKey } = req.body;
+  const apiKey = req.headers['x-api-key'] || req.query.apiKey;
 
   if (!apiKey) {
-    return res.status(400).json({ message: "API-Key fehlt" });
+    res.status(400).json({ error: 'API key missing' });
+    return;
   }
 
   try {
-    const response = await fetch("https://api-eu.oceaview.com/public/api/v1/equipments", {
-      headers: {
-        "X-API-KEY": apiKey,
-        Accept: "application/json",
-      },
+    const response = await fetch('https://deine-api-url/equipments', {
+      headers: { 'Authorization': `Bearer ${apiKey}` }
     });
-
-    if (!response.ok) {
-      const errData = await response.json();
-      return res.status(response.status).json({ message: errData.message || "API Fehler" });
-    }
-
     const data = await response.json();
 
-    // Je nach API Struktur hier anpassen,
-    // z.B. falls Sensoren in data.sensors o.ä. drin sind
-    // Hier nehmen wir einfach an data ist Array der Geräte
+    // Beispiel: Daten strukturieren
+    const enrichedData = data.equipments.map(equipment => ({
+      id: equipment.id,
+      name: equipment.name,
+      sensors: equipment.sensors.map(sensor => ({
+        id: sensor.id,
+        type: sensor.type,
+        values: sensor.values,
+        lastUpdated: sensor.lastUpdated
+      }))
+    }));
 
-    return res.status(200).json(data);
+    res.status(200).json({ equipments: enrichedData });
   } catch (error) {
-    return res.status(500).json({ message: "Interner Serverfehler" });
+    res.status(500).json({ error: error.message || 'Fetch error' });
   }
 }
