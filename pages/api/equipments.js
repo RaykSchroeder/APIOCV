@@ -5,7 +5,7 @@ export default async function handler(req, res) {
 
   const { apiKey } = req.body;
   if (!apiKey) {
-    return res.status(400).json({ message: "API Key erforderlich" });
+    return res.status(400).json({ message: "API-Key fehlt" });
   }
 
   try {
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
         "Accept": "application/json"
       }
     });
-    if (!response.ok) throw new Error("Fehler von der API");
+    if (!response.ok) throw new Error("Fehler beim Abrufen der Daten");
     const data = await response.json();
     res.status(200).json(data);
   } catch (err) {
