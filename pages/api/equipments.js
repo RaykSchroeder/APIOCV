@@ -11,7 +11,7 @@ export default async function handler(req, res) {
 
   try {
     console.log('API-Key erhalten:', apiKey);
-    const response = await fetch('ttps://api-eu.oceaview.com/public/api/v1/equipments', {
+    const response = await fetch('https://api-eu.oceaview.com/public/api/v1/equipments', {
       headers: { 'Authorization': `Bearer ${apiKey}` }
     });
 
