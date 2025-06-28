@@ -19,7 +19,6 @@ export default async function handler(req, res) {
     });
 
     console.log('API-Response Status:', response.status);
-
     if (!response.ok) {
       const errText = await response.text();
       console.log('API-Fehler:', errText);
@@ -29,11 +28,11 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    console.log('API-Antwort:', JSON.stringify(data, null, 2)); // Kompletten Body loggen
+    // Logge die komplette API-Antwort
+    console.log('Raw API response:', JSON.stringify(data, null, 2));
 
-    // Falls die API nicht exakt {equipments: [...]} zurückgibt,
-    // gib die gesamte Antwort als 'equipments' zurück zur Sicherheit
-    res.status(200).json({ equipments: data.equipments || data });
+    // Rückgabe der kompletten Daten an Frontend, nicht nur data.equipments
+    res.status(200).json({ equipments: data });
   } catch (error) {
     console.error('Fetch-Fehler:', error);
     res.status(500).json({ error: error.message || 'Fetch error' });
