@@ -2,64 +2,33 @@ import { useState } from 'react';
 
 export default function Home() {
   const [apiKey, setApiKey] = useState('');
-  const [equipments, setEquipments] = useState(null);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [submittedKey, setSubmittedKey] = useState(null);
 
-  const handleFetchEquipments = async () => {
-    setLoading(true);
-    setError(null);
-    setEquipments(null);
-
-    try {
-      const res = await fetch('/api/equipments', {
-        headers: {
-          'X-API-KEY': apiKey,
-        },
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        setError(err.error || 'Unbekannter Fehler');
-      } else {
-        const data = await res.json();
-        setEquipments(data);
-      }
-    } catch (err) {
-      setError('Fehler bei der Anfrage');
-    } finally {
-      setLoading(false);
-    }
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setSubmittedKey(apiKey);
+    alert('API-Key eingetragen: ' + apiKey);
   };
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div style={{ padding: 20 }}>
       <h1>API-Key Eingabe</h1>
-      <input
-        type="text"
-        placeholder="API-Key eingeben"
-        value={apiKey}
-        onChange={(e) => setApiKey(e.target.value)}
-        style={{ width: '300px', padding: '8px', fontSize: '16px' }}
-        autoFocus
-      />
-      <button
-        onClick={handleFetchEquipments}
-        disabled={!apiKey || loading}
-        style={{ marginLeft: '10px', padding: '8px 16px', fontSize: '16px' }}
-      >
-        {loading ? 'Lade...' : 'Geräte laden'}
-      </button>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="text"
+          placeholder="API-Key eingeben"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+          style={{ padding: 8, fontSize: 16, width: 300 }}
+          autoFocus
+        />
+        <button type="submit" style={{ marginLeft: 10, padding: '8px 16px' }}>
+          Absenden
+        </button>
+      </form>
 
-      {error && <p style={{ color: 'red', marginTop: '20px' }}>Fehler: {error}</p>}
-
-      {equipments && (
-        <div style={{ marginTop: '20px' }}>
-          <h2>Gefundene Geräte:</h2>
-          <pre style={{ background: '#eee', padding: '10px' }}>
-            {JSON.stringify(equipments, null, 2)}
-          </pre>
-        </div>
+      {submittedKey && (
+        <p style={{ marginTop: 20 }}>Aktuell eingetragener API-Key: {submittedKey}</p>
       )}
     </div>
   );
