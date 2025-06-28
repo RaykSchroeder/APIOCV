@@ -1,24 +1,24 @@
-import { useState } from "react";
+import { useState } from 'react';
 
 export default function Home() {
-  const [apiKey, setApiKey] = useState("");
+  const [apiKey, setApiKey] = useState('');
 
-  function handleSubmit(e) {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    alert("Dein API-Key ist: " + apiKey);
-    // Hier kannst du nach der Eingabe dann API-Aufrufe starten
-  }
+    alert('API-Key: ' + apiKey);
+  };
 
   return (
-    <div style={{ padding: 20 }}>
+    <div style={{ padding: '20px' }}>
+      <h1>API-Key Eingabe</h1>
       <form onSubmit={handleSubmit}>
         <input
-          type="password"
+          type="text"
           placeholder="API-Key eingeben"
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
-          style={{ width: 300, padding: 8 }}
           autoFocus
+          style={{ width: '300px', padding: '8px', fontSize: '16px' }}
         />
       </form>
     </div>
