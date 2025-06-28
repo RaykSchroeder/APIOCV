@@ -17,7 +17,6 @@ export default function Home() {
     setEquipment([]);
 
     try {
-      apiKey = "/iIlLdOTEUMjrk7Hm/yrWaHnA+UeEu/w/h6rxFRaaC4ZPiv9LzDpx/gLUoRrimyM/7nc8JQ22R6lAdhX6UCi/w=="
       const res = await fetch("/api/equipments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
