@@ -29,7 +29,7 @@ export default function Home() {
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', maxWidth: '600px', margin: '0 auto' }}>
       <h1>API-Key Eingabe</h1>
       <form onSubmit={handleSubmit} style={{ marginBottom: '20px' }}>
         <input
@@ -57,18 +57,32 @@ export default function Home() {
           {equipments.length === 0 ? (
             <p>Keine Geräte gefunden.</p>
           ) : (
-            <ul>
+            <ul style={{ listStyleType: 'none', padding: 0 }}>
               {equipments.map((eq, idx) => (
-                <li key={idx} style={{ marginBottom: '10px' }}>
+                <li key={idx} style={{ marginBottom: '15px', padding: '10px', border: '1px solid #ccc', borderRadius: '8px' }}>
                   <strong>Name:</strong> {eq.name || 'Unbekannt'} <br />
                   <strong>ID:</strong> {eq.id || 'Unbekannt'} <br />
-                  <strong>Sensor:</strong> {eq.sensorType || 'Nicht angegeben'} <br />
-                  <strong>Werte:</strong>{' '}
-                  {eq.values
-                    ? Object.entries(eq.values)
-                        .map(([k, v]) => `${k}: ${v}`)
-                        .join(', ')
-                    : 'Keine'}
+                  <strong>Typ:</strong> {eq.type || 'Nicht angegeben'} <br />
+                  {eq.sensors && eq.sensors.length > 0 ? (
+                    <div style={{ marginTop: '5px' }}>
+                      <strong>Sensoren:</strong>
+                      <ul>
+                        {eq.sensors.map((sensor, sidx) => (
+                          <li key={sidx}>
+                            Typ: {sensor.type || 'Nicht angegeben'}<br />
+                            Werte:{' '}
+                            {sensor.values
+                              ? Object.entries(sensor.values)
+                                  .map(([k, v]) => `${k}: ${v}`)
+                                  .join(', ')
+                              : 'Keine'}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <div><strong>Sensoren:</strong> Keine vorhanden</div>
+                  )}
                 </li>
               ))}
             </ul>
