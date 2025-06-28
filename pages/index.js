@@ -2,16 +2,20 @@ import { useState } from "react";
 
 export default function Home() {
   const [apiKey, setApiKey] = useState("");
+  const [tempKey, setTempKey] = useState("");
   const [equipment, setEquipment] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const fetchEquipments = async () => {
-    if (!apiKey) {
-      setError("Bitte API-Key eingeben");
+  const handleKeySubmit = () => {
+    if (tempKey.trim() === "") {
+      alert("Bitte API-Key eingeben");
       return;
     }
+    setApiKey(tempKey);
+  };
 
+  const fetchEquipments = async () => {
     setLoading(true);
     setError("");
     setEquipment([]);
@@ -38,25 +42,38 @@ export default function Home() {
     }
   };
 
-  return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Oceaview Dashboard</h1>
-
-      <div className="mb-4">
+  if (!apiKey) {
+    // Blocke alles, zeige nur Eingabe
+    return (
+      <div className="p-4">
+        <h1 className="text-2xl font-bold mb-4">API-Key erforderlich</h1>
         <input
           type="text"
           placeholder="API-Key eingeben"
           className="border p-2 mr-2"
-          value={apiKey}
-          onChange={(e) => setApiKey(e.target.value)}
+          value={tempKey}
+          onChange={(e) => setTempKey(e.target.value)}
         />
         <button
           className="bg-blue-500 text-white p-2"
-          onClick={fetchEquipments}
+          onClick={handleKeySubmit}
         >
-          Geräte laden
+          API-Key bestätigen
         </button>
       </div>
+    );
+  }
+
+  return (
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">Oceaview Dashboard</h1>
+
+      <button
+        className="bg-blue-500 text-white p-2 mb-4"
+        onClick={fetchEquipments}
+      >
+        Geräte laden
+      </button>
 
       {loading && <p>Lade Daten...</p>}
       {error && <p className="text-red-500">{error}</p>}
