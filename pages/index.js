@@ -11,18 +11,26 @@ export default function Home() {
       setError("Bitte API-Key eingeben");
       return;
     }
+
     setLoading(true);
     setError("");
     setEquipment([]);
+
     try {
       const res = await fetch("/api/equipments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ apiKey }),
       });
+
       if (!res.ok) throw new Error("API-Fehler");
+
       const data = await res.json();
-      setEquipment(data.data || []);
+      if (data.data) {
+        setEquipment(data.data);
+      } else {
+        setError("Keine Geräte gefunden");
+      }
     } catch (err) {
       setError(err.message);
     } finally {
