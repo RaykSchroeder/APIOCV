@@ -20,6 +20,9 @@ export default function Home() {
           autoFocus
           style={{ width: '300px', padding: '8px', fontSize: '16px' }}
         />
+        <button type="submit" style={{ marginLeft: '10px', padding: '8px 16px' }}>
+          Absenden
+        </button>
       </form>
     </div>
   );
