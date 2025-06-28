@@ -1,41 +1,95 @@
-import fetch from 'node-fetch';
+import { useState } from 'react';
 
-export default async function handler(req, res) {
-  const apiKey = req.headers['x-api-key'] || req.query.apiKey;
+export default function Home() {
+  const [apiKey, setApiKey] = useState('');
+  const [equipments, setEquipments] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  if (!apiKey) {
-    console.log('Kein API-Key übergeben');
-    res.status(400).json({ error: 'API key missing' });
-    return;
-  }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setEquipments(null);
+    setLoading(true);
 
-  try {
-    console.log('API-Key erhalten:', apiKey);
-    const response = await fetch('https://api-eu.oceaview.com/public/api/v1/equipments', {
-      headers: {
-        'X-API-KEY': apiKey,
-        'Accept': 'application/json'
+    try {
+      const res = await fetch(`/api/equipments?apiKey=${encodeURIComponent(apiKey)}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Unbekannter Fehler');
       }
-    });
 
-    console.log('API-Response Status:', response.status);
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.log('API-Fehler:', errText);
-      res.status(response.status).json({ error: errText });
-      return;
+      setEquipments(data.equipments);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const data = await response.json();
+  return (
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', maxWidth: '600px', margin: '0 auto' }}>
+      <h1>API-Key Eingabe</h1>
+      <form onSubmit={handleSubmit} style={{ marginBottom: '20px' }}>
+        <input
+          type="text"
+          placeholder="API-Key eingeben"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+          style={{ width: '300px', padding: '8px', fontSize: '16px' }}
+          required
+        />
+        <button
+          type="submit"
+          style={{ padding: '8px 12px', marginLeft: '10px', fontSize: '16px' }}
+        >
+          Abfragen
+        </button>
+      </form>
 
-    console.log('API-Antwort:', JSON.stringify(data, null, 2)); // Kompletten Body loggen
+      {loading && <p>Lade Daten...</p>}
 
-    // Falls die API nicht exakt {equipments: [...]} zurückgibt,
-    // gib die gesamte Antwort als 'equipments' zurück zur Sicherheit
-    res.status(200).json({ equipments: data.equipments || data });
-  } catch (error) {
-    console.error('Fetch-Fehler:', error);
-    res.status(500).json({ error: error.message || 'Fetch error' });
-  }
+      {error && <p style={{ color: 'red' }}>Fehler: {error}</p>}
+
+      {equipments && (
+        <div>
+          <h2>Gefundene Geräte:</h2>
+          {Array.isArray(equipments) && equipments.length === 0 ? (
+            <p>Keine Geräte gefunden.</p>
+          ) : (
+            <ul style={{ listStyleType: 'none', padding: 0 }}>
+              {(Array.isArray(equipments) ? equipments : [equipments]).map((eq, idx) => (
+                <li key={idx} style={{ marginBottom: '15px', padding: '10px', border: '1px solid #ccc', borderRadius: '8px' }}>
+                  <strong>Name:</strong> {eq.name || 'Unbekannt'} <br />
+                  <strong>ID:</strong> {eq.id || 'Unbekannt'} <br />
+                  <strong>Typ:</strong> {eq.type || 'Nicht angegeben'} <br />
+                  {eq.sensors && eq.sensors.length > 0 ? (
+                    <div style={{ marginTop: '5px' }}>
+                      <strong>Sensoren:</strong>
+                      <ul>
+                        {eq.sensors.map((sensor, sidx) => (
+                          <li key={sidx}>
+                            Typ: {sensor.type || 'Nicht angegeben'}<br />
+                            Werte:{' '}
+                            {sensor.values
+                              ? Object.entries(sensor.values)
+                                  .map(([k, v]) => `${k}: ${v}`)
+                                  .join(', ')
+                              : 'Keine'}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <div><strong>Sensoren:</strong> Keine vorhanden</div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
