@@ -1,14 +1,39 @@
-// pages/index.js
-import { useState } from 'react';
+import { useState } from "react";
 
 export default function Home() {
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [data, setData] = useState(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
-    // Hier kannst du z.B. die API mit apiKey aufrufen oder speichern
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/equipments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ apiKey }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Fehler bei der API-Abfrage");
+      }
+
+      const result = await res.json();
+      setData(result);
+      setSubmitted(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -26,16 +51,35 @@ export default function Home() {
               style={{ width: 300, padding: 8, fontSize: 16 }}
               required
             />
-            <button type="submit" style={{ marginLeft: 10, padding: '8px 16px' }}>
+            <button type="submit" style={{ marginLeft: 10, padding: "8px 16px" }}>
               Senden
             </button>
           </form>
+          {loading && <p>Lade Daten...</p>}
+          {error && <p style={{ color: "red" }}>{error}</p>}
         </>
       ) : (
         <div>
-          <h2>API-Key gespeichert:</h2>
-          <p>{apiKey}</p>
-          <button onClick={() => { setApiKey(''); setSubmitted(false); }}>
+          <h2>Sensoren / Geräte</h2>
+          {data && data.length === 0 && <p>Keine Geräte gefunden.</p>}
+          {data && data.length > 0 && (
+            <ul>
+              {data.map((item) => (
+                <li key={item.id}>
+                  <strong>{item.name}</strong>: {item.description || "Keine Beschreibung"}
+                </li>
+              ))}
+            </ul>
+          )}
+          <button
+            onClick={() => {
+              setApiKey("");
+              setSubmitted(false);
+              setData(null);
+              setError("");
+            }}
+            style={{ marginTop: 20, padding: "8px 16px" }}
+          >
             API-Key neu eingeben
           </button>
         </div>
