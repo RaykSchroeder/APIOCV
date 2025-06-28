@@ -20,7 +20,12 @@ export default function Home() {
         throw new Error(data.error || 'Unbekannter Fehler');
       }
 
-      setEquipments(data.equipments);
+      // Falls data.equipments kein Array ist, versuche ein Array daraus zu machen
+      const equipmentArray = Array.isArray(data.equipments)
+        ? data.equipments
+        : [data.equipments].flat().filter(Boolean);
+
+      setEquipments(equipmentArray);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -38,7 +43,6 @@ export default function Home() {
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
           style={{ width: '300px', padding: '8px', fontSize: '16px' }}
-          required
         />
         <button
           type="submit"
@@ -55,11 +59,11 @@ export default function Home() {
       {equipments && (
         <div>
           <h2>Gefundene Geräte:</h2>
-          {Array.isArray(equipments) && equipments.length === 0 ? (
+          {equipments.length === 0 ? (
             <p>Keine Geräte gefunden.</p>
           ) : (
             <ul style={{ listStyleType: 'none', padding: 0 }}>
-              {(Array.isArray(equipments) ? equipments : [equipments]).map((eq, idx) => (
+              {equipments.map((eq, idx) => (
                 <li key={idx} style={{ marginBottom: '15px', padding: '10px', border: '1px solid #ccc', borderRadius: '8px' }}>
                   <strong>Name:</strong> {eq.name || 'Unbekannt'} <br />
                   <strong>ID:</strong> {eq.id || 'Unbekannt'} <br />
