@@ -6,11 +6,10 @@
     "build": "next build",
     "start": "next start"
   },
-    "dependencies": {
+  "dependencies": {
     "next": "13.x",
     "react": "18.x",
     "react-dom": "18.x",
     "node-fetch": "^3.3.1"
   }
-
 }
