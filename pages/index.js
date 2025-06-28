@@ -2,80 +2,86 @@ import { useState } from "react";
 
 export default function Home() {
   const [apiKey, setApiKey] = useState("");
-  const [equipment, setEquipment] = useState([]);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [inputKey, setInputKey] = useState("");
+  const [equipment, setEquipment] = useState(null);
+  const [error, setError] = useState(null);
 
-  const fetchEquipments = async () => {
-    if (!apiKey.trim()) {
-      setError("Bitte API-Key eingeben");
+  async function loadEquipment() {
+    setError(null);
+    setEquipment(null);
+
+    if (!apiKey) {
+      setError("Bitte API-Key eingeben.");
       return;
     }
-
-    setLoading(true);
-    setError("");
-    setEquipment([]);
 
     try {
       const res = await fetch("/api/equipments", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ apiKey }),
       });
 
-      if (!res.ok) throw new Error("API-Fehler");
+      if (!res.ok) {
+        const err = await res.json();
+        setError(`Fehler: ${err.error?.message || JSON.stringify(err.error)}`);
+        return;
+      }
 
       const data = await res.json();
-      if (data.data) {
-        setEquipment(data.data);
-      } else {
-        setError("Keine Geräte gefunden");
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      setEquipment(data.data);
+    } catch (e) {
+      setError("Fehler beim Laden der Geräte: " + e.message);
     }
-  };
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    setApiKey(inputKey.trim());
+  }
+
+  function handleLogout() {
+    setApiKey("");
+    setEquipment(null);
+    setError(null);
+    setInputKey("");
+  }
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Oceaview Dashboard</h1>
+    <div style={{ padding: 20 }}>
+      {!apiKey ? (
+        <form onSubmit={handleSubmit}>
+          <label>
+            API-Key eingeben:{" "}
+            <input
+              type="password"
+              value={inputKey}
+              onChange={(e) => setInputKey(e.target.value)}
+              style={{ width: "300px" }}
+              required
+            />
+          </label>
+          <button type="submit">Speichern</button>
+        </form>
+      ) : (
+        <>
+          <button onClick={handleLogout}>API-Key entfernen</button>
+          <button onClick={loadEquipment} style={{ marginLeft: 10 }}>
+            Geräte laden
+          </button>
 
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="API-Key eingeben"
-          className="border p-2 mr-2"
-          value={apiKey}
-          onChange={(e) => setApiKey(e.target.value)}
-        />
-        <button
-          className="bg-blue-500 text-white p-2"
-          onClick={fetchEquipments}
-        >
-          Geräte laden
-        </button>
-      </div>
+          {error && <p style={{ color: "red" }}>{error}</p>}
 
-      {loading && <p>Lade Geräte...</p>}
-      {error && <p className="text-red-500">{error}</p>}
-
-      {equipment.map((eq) => (
-        <div key={eq.id} className="border p-2 rounded mb-2">
-          <h2 className="font-semibold">{eq.name}</h2>
-          {eq.sensors?.length > 0 ? (
-            eq.sensors.map((s) => (
-              <div key={s.id} className="pl-4">
-                <p>Sensor: {s.name} ({s.type})</p>
-                <p>Einheit: {s.unit}</p>
-              </div>
-            ))
-          ) : (
-            <p>Keine Sensoren vorhanden</p>
+          {equipment && (
+            <div style={{ marginTop: 20 }}>
+              <h2>Geräte:</h2>
+              <pre>{JSON.stringify(equipment, null, 2)}</pre>
+            </div>
           )}
-        </div>
-      ))}
+        </>
+      )}
     </div>
   );
 }
