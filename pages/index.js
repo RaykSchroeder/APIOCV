@@ -2,20 +2,16 @@ import { useState } from "react";
 
 export default function Home() {
   const [apiKey, setApiKey] = useState("");
-  const [tempKey, setTempKey] = useState("");
   const [equipment, setEquipment] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleKeySubmit = () => {
-    if (tempKey.trim() === "") {
-      alert("Bitte API-Key eingeben");
+  const fetchEquipments = async () => {
+    if (!apiKey.trim()) {
+      setError("Bitte API-Key eingeben");
       return;
     }
-    setApiKey(tempKey);
-  };
 
-  const fetchEquipments = async () => {
     setLoading(true);
     setError("");
     setEquipment([]);
@@ -42,46 +38,33 @@ export default function Home() {
     }
   };
 
-  if (!apiKey) {
-    // Blocke alles, zeige nur Eingabe
-    return (
-      <div className="p-4">
-        <h1 className="text-2xl font-bold mb-4">API-Key erforderlich</h1>
-        <input
-          type="text"
-          placeholder="API-Key eingeben"
-          className="border p-2 mr-2"
-          value={tempKey}
-          onChange={(e) => setTempKey(e.target.value)}
-        />
-        <button
-          className="bg-blue-500 text-white p-2"
-          onClick={handleKeySubmit}
-        >
-          API-Key bestätigen
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Oceaview Dashboard</h1>
 
-      <button
-        className="bg-blue-500 text-white p-2 mb-4"
-        onClick={fetchEquipments}
-      >
-        Geräte laden
-      </button>
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="API-Key eingeben"
+          className="border p-2 mr-2"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+        />
+        <button
+          className="bg-blue-500 text-white p-2"
+          onClick={fetchEquipments}
+        >
+          Geräte laden
+        </button>
+      </div>
 
-      {loading && <p>Lade Daten...</p>}
+      {loading && <p>Lade Geräte...</p>}
       {error && <p className="text-red-500">{error}</p>}
 
       {equipment.map((eq) => (
         <div key={eq.id} className="border p-2 rounded mb-2">
           <h2 className="font-semibold">{eq.name}</h2>
-          {eq.sensors && eq.sensors.length > 0 ? (
+          {eq.sensors?.length > 0 ? (
             eq.sensors.map((s) => (
               <div key={s.id} className="pl-4">
                 <p>Sensor: {s.name} ({s.type})</p>
@@ -89,7 +72,7 @@ export default function Home() {
               </div>
             ))
           ) : (
-            <p>Keine Sensoren gefunden.</p>
+            <p>Keine Sensoren vorhanden</p>
           )}
         </div>
       ))}
