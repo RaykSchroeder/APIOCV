@@ -4,30 +4,29 @@ export default async function handler(req, res) {
   const apiKey = req.headers['x-api-key'] || req.query.apiKey;
 
   if (!apiKey) {
+    console.log('Kein API-Key übergeben');
     res.status(400).json({ error: 'API key missing' });
     return;
   }
 
   try {
+    console.log('API-Key erhalten:', apiKey);
     const response = await fetch('https://deine-api-url/equipments', {
       headers: { 'Authorization': `Bearer ${apiKey}` }
     });
+
+    console.log('API-Response Status:', response.status);
+    if (!response.ok) {
+      const errText = await response.text();
+      console.log('API-Fehler:', errText);
+      res.status(response.status).json({ error: errText });
+      return;
+    }
+
     const data = await response.json();
-
-    // Beispiel: Daten strukturieren
-    const enrichedData = data.equipments.map(equipment => ({
-      id: equipment.id,
-      name: equipment.name,
-      sensors: equipment.sensors.map(sensor => ({
-        id: sensor.id,
-        type: sensor.type,
-        values: sensor.values,
-        lastUpdated: sensor.lastUpdated
-      }))
-    }));
-
-    res.status(200).json({ equipments: enrichedData });
+    res.status(200).json({ equipments: data.equipments });
   } catch (error) {
+    console.error('Fetch-Fehler:', error);
     res.status(500).json({ error: error.message || 'Fetch error' });
   }
 }
