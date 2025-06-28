@@ -9,63 +9,70 @@ export default function Home() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    setEquipments(null);
     setLoading(true);
 
     try {
       const res = await fetch(`/api/equipments?apiKey=${encodeURIComponent(apiKey)}`);
-      if (!res.ok) throw new Error('API-Request fehlgeschlagen');
       const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Unbekannter Fehler');
+      }
+
       setEquipments(data.equipments);
     } catch (err) {
       setError(err.message);
-      setEquipments(null);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       <h1>API-Key Eingabe</h1>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} style={{ marginBottom: '20px' }}>
         <input
           type="text"
           placeholder="API-Key eingeben"
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
-          autoFocus
           style={{ width: '300px', padding: '8px', fontSize: '16px' }}
         />
-        <button type="submit" style={{ marginLeft: '10px', padding: '8px 16px' }}>
+        <button
+          type="submit"
+          style={{ padding: '8px 12px', marginLeft: '10px', fontSize: '16px' }}
+        >
           Abfragen
         </button>
       </form>
 
       {loading && <p>Lade Daten...</p>}
+
       {error && <p style={{ color: 'red' }}>Fehler: {error}</p>}
 
       {equipments && (
-        <div style={{ marginTop: '20px' }}>
-          <h2>Geräte & Sensoren</h2>
-          {equipments.length === 0 && <p>Keine Geräte gefunden.</p>}
-          {equipments.map((equipment) => (
-            <div key={equipment.id} style={{ border: '1px solid #ccc', marginBottom: '15px', padding: '10px' }}>
-              <h3>{equipment.name}</h3>
-              {equipment.sensors.length === 0 && <p>Keine Sensoren angeschlossen.</p>}
-              {equipment.sensors.map((sensor) => (
-                <div key={sensor.id} style={{ marginBottom: '10px' }}>
-                  <strong>Sensor Typ:</strong> {sensor.type} <br />
-                  <strong>Letzte Aktualisierung:</strong> {sensor.lastUpdated} <br />
-                  <strong>Werte:</strong>
-                  <ul>
-                    {Object.entries(sensor.values).map(([key, val]) => (
-                      <li key={key}>{key}: {val}</li>
-                    ))}
-                  </ul>
-                </div>
+        <div>
+          <h2>Gefundene Geräte:</h2>
+          {equipments.length === 0 ? (
+            <p>Keine Geräte gefunden.</p>
+          ) : (
+            <ul>
+              {equipments.map((eq, idx) => (
+                <li key={idx} style={{ marginBottom: '10px' }}>
+                  <strong>Name:</strong> {eq.name || 'Unbekannt'} <br />
+                  <strong>ID:</strong> {eq.id || 'Unbekannt'} <br />
+                  <strong>Sensor:</strong> {eq.sensorType || 'Nicht angegeben'} <br />
+                  <strong>Werte:</strong>{' '}
+                  {eq.values
+                    ? Object.entries(eq.values)
+                        .map(([k, v]) => `${k}: ${v}`)
+                        .join(', ')
+                    : 'Keine'}
+                </li>
               ))}
-            </div>
-          ))}
+            </ul>
+          )}
         </div>
       )}
     </div>
