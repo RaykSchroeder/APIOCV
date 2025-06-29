@@ -1,48 +1,47 @@
 import { useState } from 'react';
-import EquipmentsMonitoring from '../components/EquipmentsMonitoring';
 
 export default function Home() {
-  const [key, setKey] = useState('');
-  const [equipments, setEquipments] = useState(null);
-  const [error, setError] = useState(null);
+  const [apiKey, setApiKey] = useState('');
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
 
-  const fetchEquipments = async () => {
-    setError(null);
+  const fetchData = async () => {
     try {
-      const res = await fetch(`/api/equipments?key=${encodeURIComponent(key)}`);
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || 'Unknown error');
+      const response = await fetch("https://api-eu.oceaview.com/public/api/v1/equipments/monitoring", {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error(`API error ${response.status}: ${text}`);
+        setError(`API error ${response.status}`);
+        return;
       }
-      const data = await res.json();
-      setEquipments(data);
+
+      const json = await response.json();
+      setData(json);
+      setError('');
     } catch (err) {
-      setError(err.message);
+      console.error('Fetch failed:', err);
+      setError('Fetch failed');
     }
   };
 
   return (
-    <div className="p-4">
-      {!equipments ? (
-        <div className="space-y-4">
-          <input
-            type="text"
-            value={key}
-            onChange={(e) => setKey(e.target.value)}
-            placeholder="Enter API Key"
-            className="border p-2 w-full"
-          />
-          <button
-            onClick={fetchEquipments}
-            className="bg-blue-500 text-white px-4 py-2 rounded"
-          >
-            Load Equipments
-          </button>
-          {error && <p className="text-red-500">{error}</p>}
-        </div>
-      ) : (
-        <EquipmentsMonitoring equipments={equipments} />
-      )}
+    <div>
+      <input
+        type="text"
+        placeholder="API Key"
+        value={apiKey}
+        onChange={(e) => setApiKey(e.target.value)}
+      />
+      <button onClick={fetchData}>Abrufen</button>
+      {error && <div style={{ color: 'red' }}>{error}</div>}
+      {data && <pre>{JSON.stringify(data, null, 2)}</pre>}
     </div>
   );
 }
