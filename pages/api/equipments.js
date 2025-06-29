@@ -5,31 +5,26 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'API key required' });
   }
 
-  const API_BASE_URL = "https://api-eu.oceaview.com";
+  console.log(`Proxying to Oceaview with API key: ${key}`);
 
   try {
-    const response = await fetch(`${API_BASE_URL}/public/api/v1/equipments/monitoring`, {
-      method: 'GET',
+    const response = await fetch("https://api-eu.oceaview.com/public/api/v1/equipments/monitoring", {
       headers: {
-        'Authorization': `Bearer ${key}`
+        'Authorization': `Bearer ${key}`,
+        'Accept': 'application/json'
       }
     });
 
-    const text = await response.text();
-
     if (!response.ok) {
-      console.error(`Upstream API error ${response.status}: ${text}`);
-      return res.status(response.status).json({
-        error: `Upstream API error: ${response.status}`,
-        details: text
-      });
+      const errorText = await response.text();
+      console.error(`Upstream API error: ${response.status} - ${errorText}`);
+      return res.status(response.status).json({ error: `Upstream API error: ${response.status}`, details: errorText });
     }
 
-    const data = JSON.parse(text);
-    return res.status(200).json(data);
-
+    const data = await response.json();
+    res.status(200).json(data);
   } catch (error) {
     console.error('Fetch failed:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 }
