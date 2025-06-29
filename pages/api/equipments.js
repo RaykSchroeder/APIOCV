@@ -1,32 +1,16 @@
-import fetch from 'node-fetch';
+export default function handler(req, res) {
+  const { key } = req.query;
 
-export default async function handler(req, res) {
-  const apiKey = req.headers['x-api-key'] || req.query.apiKey;
-
-  if (!apiKey) {
-    res.status(400).json({ error: 'API key missing' });
-    return;
+  if (!key || key !== "geheim") {
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
-  try {
-    const response = await fetch('https://api-eu.oceaview.com/public/api/v1/equipments', {
-      headers: {
-        'X-API-KEY': apiKey,
-        'Accept': 'application/json'
-      }
-    });
+  // Beispiel-Daten
+  const equipments = [
+    { name: "Equipment 1", status: "active", details: { type: "sensor", location: "Berlin" } },
+    { name: "Equipment 2", status: "inactive", details: { type: "camera", location: "Hamburg" } },
+    { name: "Equipment 3", status: "active", details: { type: "motor", location: "Munich" } },
+  ];
 
-    if (!response.ok) {
-      const errText = await response.text();
-      res.status(response.status).json({ error: errText });
-      return;
-    }
-
-    const data = await response.json();
-
-    // Rückgabe direkt der Geräte-Liste
-    res.status(200).json({ equipments: data });
-  } catch (error) {
-    res.status(500).json({ error: error.message || 'Fetch error' });
-  }
+  res.status(200).json(equipments);
 }
