@@ -11,7 +11,7 @@ export default function EquipmentsMonitoring({ apiKey }) {
       try {
         const res = await fetch(`/api/equipments?key=${encodeURIComponent(apiKey)}`);
         if (!res.ok) {
-          throw new Error(`HTTP error ${res.status}`);
+          throw new Error(`API Fehler: ${res.status}`);
         }
         const data = await res.json();
 
@@ -20,10 +20,10 @@ export default function EquipmentsMonitoring({ apiKey }) {
         } else if (data.equipments && Array.isArray(data.equipments)) {
           setEquipments(data.equipments);
         } else {
-          throw new Error('API returned invalid data format');
+          throw new Error('Ungültiges Datenformat von API');
         }
       } catch (err) {
-        console.error('Error fetching equipments:', err);
+        console.error(err);
         setError(err.message);
       }
     }
@@ -32,27 +32,24 @@ export default function EquipmentsMonitoring({ apiKey }) {
   }, [apiKey]);
 
   if (error) {
-    return (
-      <div className="p-4 text-red-600">
-        Fehler: {error}
-      </div>
-    );
+    return <div className="text-red-600 p-4">Fehler: {error}</div>;
   }
 
   return (
     <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">Equipments</h1>
-      <ul className="space-y-2 max-h-96 overflow-y-auto border rounded p-2">
-        {(equipments || []).map((eq, idx) => (
+      <h2 className="text-xl font-bold mb-2">Equipments</h2>
+      <ul className="max-h-96 overflow-y-auto border rounded p-2 space-y-1">
+        {equipments.map((eq, idx) => (
           <li
             key={idx}
-            className="border p-2 rounded cursor-pointer hover:bg-gray-100"
+            className="p-2 border rounded hover:bg-gray-100 cursor-pointer"
             onClick={() => setSelectedEquipment(eq)}
           >
-            {eq.name || "Unbenanntes Equipment"}
+            {eq.name || 'Unbenanntes Equipment'}
           </li>
         ))}
       </ul>
+
       {selectedEquipment && (
         <Modal equipment={selectedEquipment} onClose={() => setSelectedEquipment(null)} />
       )}
