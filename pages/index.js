@@ -4,11 +4,11 @@ export default function Home() {
   const [apiKey, setApiKey] = useState('');
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
+  const [selectedEquipment, setSelectedEquipment] = useState(null);
 
   const fetchData = async () => {
     try {
       const res = await fetch(`/api/equipments?key=${encodeURIComponent(apiKey)}`);
-
       const json = await res.json();
 
       if (!res.ok) {
@@ -19,6 +19,7 @@ export default function Home() {
 
       setData(json);
       setError('');
+      setSelectedEquipment(null); // Reset Modal wenn neue Daten geladen werden
     } catch (err) {
       console.error('Fetch failed:', err);
       setError('Fetch failed');
@@ -42,10 +43,61 @@ export default function Home() {
         Abrufen
       </button>
       {error && <div className="text-red-500 mt-2">{error}</div>}
-      {data && (
-        <pre className="bg-gray-100 p-2 mt-2 rounded max-h-64 overflow-auto">
-          {JSON.stringify(data, null, 2)}
-        </pre>
+
+      {/* Wenn Daten da sind: Liste von Equipment-Buttons */}
+      {data && Array.isArray(data) && (
+        <div className="mt-4 space-y-2 max-h-64 overflow-auto border p-2 rounded">
+          {data.map((eq) => (
+            <button
+              key={eq.id}
+              className="block w-full text-left px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded"
+              onClick={() => setSelectedEquipment(eq)}
+            >
+              {eq.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Modal / Popup mit Details */}
+      {selectedEquipment && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={() => setSelectedEquipment(null)} // Klick auf Hintergrund schließt Modal
+        >
+          <div
+            className="bg-white p-6 rounded max-w-xl max-h-[80vh] overflow-auto"
+            onClick={(e) => e.stopPropagation()} // Klick in Modal stoppt das Schließen
+          >
+            <h2 className="text-xl font-bold mb-4">{selectedEquipment.name}</h2>
+            <p><strong>Topology:</strong> {selectedEquipment.topology?.name || '–'}</p>
+
+            <h3 className="mt-4 font-semibold">Data Loggings:</h3>
+            <ul className="list-disc ml-6">
+              {selectedEquipment.dataLoggings?.map((dl) => (
+                <li key={dl.id} className="mb-2">
+                  <strong>{dl.name}</strong> — Letzte Messung: {dl.lastReading.value} {dl.lastReading.unit} am {dl.lastReading.date}
+                  {dl.ongoingAlarms.length > 0 && (
+                    <ul className="list-decimal ml-4 mt-1 text-red-600">
+                      {dl.ongoingAlarms.map((alarm) => (
+                        <li key={alarm.id}>
+                          Alarm Level: {alarm.level}, Typ: {alarm.type}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ul>
+
+            <button
+              onClick={() => setSelectedEquipment(null)}
+              className="mt-6 bg-red-500 text-white px-4 py-2 rounded"
+            >
+              Schließen
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
