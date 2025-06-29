@@ -2,14 +2,15 @@ import { useState } from 'react';
 
 export default function Home() {
   const [apiKey, setApiKey] = useState('');
-  const [equipments, setEquipments] = useState(null);
+  const [equipments, setEquipments] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
-    setEquipments(null);
+    setEquipments([]);
     setLoading(true);
 
     try {
@@ -20,7 +21,6 @@ export default function Home() {
         throw new Error(data.error || 'Unbekannter Fehler');
       }
 
-      // Falls data.equipments kein Array ist, versuche ein Array daraus zu machen
       const equipmentArray = Array.isArray(data.equipments)
         ? data.equipments
         : [data.equipments].flat().filter(Boolean);
@@ -33,9 +33,13 @@ export default function Home() {
     }
   };
 
+  const filteredEquipments = equipments.filter((eq) =>
+    eq.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', maxWidth: '600px', margin: '0 auto' }}>
-      <h1>API-Key Eingabe</h1>
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', maxWidth: '800px', margin: '0 auto' }}>
+      <h1>Geräte Abfrage</h1>
       <form onSubmit={handleSubmit} style={{ marginBottom: '20px' }}>
         <input
           type="text"
@@ -52,42 +56,37 @@ export default function Home() {
         </button>
       </form>
 
-      {loading && <p>Lade Daten...</p>}
+      {equipments.length > 0 && (
+        <div style={{ marginBottom: '20px' }}>
+          <input
+            type="text"
+            placeholder="Geräte suchen..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ width: '100%', padding: '8px', fontSize: '16px' }}
+          />
+        </div>
+      )}
 
+      {loading && <p>Lade Daten...</p>}
       {error && <p style={{ color: 'red' }}>Fehler: {error}</p>}
 
-      {equipments && (
+      {equipments.length > 0 && (
         <div>
           <h2>Gefundene Geräte:</h2>
-          {equipments.length === 0 ? (
-            <p>Keine Geräte gefunden.</p>
+          {filteredEquipments.length === 0 ? (
+            <p>Keine Geräte passend zur Suche.</p>
           ) : (
             <ul style={{ listStyleType: 'none', padding: 0 }}>
-              {equipments.map((eq, idx) => (
+              {filteredEquipments.map((eq, idx) => (
                 <li key={idx} style={{ marginBottom: '15px', padding: '10px', border: '1px solid #ccc', borderRadius: '8px' }}>
                   <strong>Name:</strong> {eq.name || 'Unbekannt'} <br />
                   <strong>ID:</strong> {eq.id || 'Unbekannt'} <br />
                   <strong>Typ:</strong> {eq.type || 'Nicht angegeben'} <br />
-                  {eq.sensors && eq.sensors.length > 0 ? (
-                    <div style={{ marginTop: '5px' }}>
-                      <strong>Sensoren:</strong>
-                      <ul>
-                        {eq.sensors.map((sensor, sidx) => (
-                          <li key={sidx}>
-                            Typ: {sensor.type || 'Nicht angegeben'}<br />
-                            Werte:{' '}
-                            {sensor.values
-                              ? Object.entries(sensor.values)
-                                  .map(([k, v]) => `${k}: ${v}`)
-                                  .join(', ')
-                              : 'Keine'}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : (
-                    <div><strong>Sensoren:</strong> Keine vorhanden</div>
-                  )}
+                  <strong>Kritisch:</strong> {eq.critical ? 'Ja' : 'Nein'} <br />
+                  <strong>Deaktiviert:</strong> {eq.disabled ? 'Ja' : 'Nein'} <br />
+                  <strong>Topologie:</strong> {eq.topology?.name || 'Nicht angegeben'} <br />
+                  <strong>Data-Loggings (aktiv):</strong> {eq.dataLoggingsOngoingCount || 0}
                 </li>
               ))}
             </ul>
