@@ -18,7 +18,6 @@ export default function Home() {
       const json = await response.json();
 
       if (!response.ok) {
-        console.error(`API error ${response.status}:`, json);
         setError(`API error ${response.status}: ${json.message || 'Unknown error'}`);
         setData(null);
         return;
