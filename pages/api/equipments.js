@@ -5,10 +5,11 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'API key required' });
   }
 
-  console.log(`Proxying to Oceaview with API key: ${key}`);
+  const url = "https://api-eu.oceaview.com/public/api/v1/equipments/monitoring";
 
   try {
-    const response = await fetch("https://api-eu.oceaview.com/public/api/v1/equipments/monitoring", {
+    const response = await fetch(url, {
+      method: 'GET',
       headers: {
         'Authorization': `Bearer ${key}`,
         'Accept': 'application/json'
@@ -17,14 +18,14 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Upstream API error: ${response.status} - ${errorText}`);
+      console.error(`API error ${response.status}: ${errorText}`);
       return res.status(response.status).json({ error: `Upstream API error: ${response.status}`, details: errorText });
     }
 
     const data = await response.json();
-    res.status(200).json(data);
-  } catch (error) {
-    console.error('Fetch failed:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(200).json(data);
+  } catch (err) {
+    console.error('Fetch failed:', err);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
