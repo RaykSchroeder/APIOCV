@@ -5,23 +5,21 @@ export default function EquipmentsMonitoring({ equipments }) {
   const [selected, setSelected] = useState(null);
 
   return (
-    <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">Equipments</h1>
-      <ul className="space-y-2 max-h-96 overflow-y-auto border rounded p-2">
-        {equipments.map((eq, index) => (
+    <div className="mt-6">
+      <h2 className="text-xl font-semibold mb-3">Equipments</h2>
+      <ul className="space-y-2 max-h-96 overflow-y-auto border rounded p-3 bg-gray-50">
+        {equipments.map((eq) => (
           <li
-            key={index}
+            key={eq.id || eq.name}
             onClick={() => setSelected(eq)}
-            className="cursor-pointer p-2 bg-gray-100 rounded hover:bg-gray-200"
+            className="cursor-pointer p-2 bg-white rounded shadow-sm hover:bg-gray-100"
           >
             {eq.name || eq.id || 'Unnamed Equipment'}
           </li>
         ))}
       </ul>
 
-      {selected && (
-        <Modal onClose={() => setSelected(null)} equipment={selected} />
-      )}
+      {selected && <Modal equipment={selected} onClose={() => setSelected(null)} />}
     </div>
   );
 }
