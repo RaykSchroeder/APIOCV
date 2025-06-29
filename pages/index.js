@@ -7,18 +7,12 @@ export default function Home() {
 
   const fetchData = async () => {
     try {
-      const response = await fetch("https://api-eu.oceaview.com/public/api/v1/equipments/monitoring", {
-        method: 'GET',
-        headers: {
-          'X-API-KEY': apiKey,
-          'Accept': 'application/json'
-        }
-      });
+      const res = await fetch(`/api/equipments?key=${encodeURIComponent(apiKey)}`);
 
-      const json = await response.json();
+      const json = await res.json();
 
-      if (!response.ok) {
-        setError(`API error ${response.status}: ${json.message || 'Unknown error'}`);
+      if (!res.ok) {
+        setError(json.error || `API error ${res.status}`);
         setData(null);
         return;
       }
@@ -49,7 +43,7 @@ export default function Home() {
       </button>
       {error && <div className="text-red-500 mt-2">{error}</div>}
       {data && (
-        <pre className="bg-gray-100 p-2 mt-2 rounded">
+        <pre className="bg-gray-100 p-2 mt-2 rounded max-h-64 overflow-auto">
           {JSON.stringify(data, null, 2)}
         </pre>
       )}
