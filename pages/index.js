@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import EquipmentsMonitoring from '@/components/EquipmentsMonitoring';
+import EquipmentsMonitoring from '../components/EquipmentsMonitoring';
 
 export default function Home() {
   const [apiKey, setApiKey] = useState('');
