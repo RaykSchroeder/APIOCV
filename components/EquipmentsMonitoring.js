@@ -1,89 +1,63 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Modal from "./Modal";
 
 export default function EquipmentsMonitoring() {
-  const [apiKey, setApiKey] = useState("");
+  const [key, setKey] = useState("");
+  const [enteredKey, setEnteredKey] = useState(null);
   const [equipments, setEquipments] = useState([]);
-  const [selectedEquip, setSelectedEquip] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [selectedEquipment, setSelectedEquipment] = useState(null);
 
   const handleLogin = async () => {
-    if (!apiKey) {
-      setError("Bitte API-Key eingeben.");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const response = await fetch("/api/monitoring/equipment/list", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Serverfehler: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      setEquipments(data.equipment || []);
-    } catch (err) {
-      setError(err.message || "Unbekannter Fehler");
-    } finally {
-      setLoading(false);
-    }
+    if (!key) return;
+    setEnteredKey(key);
   };
+
+  useEffect(() => {
+    if (enteredKey) {
+      fetch(`/api/equipments?key=${enteredKey}`)
+        .then((res) => res.json())
+        .then((data) => setEquipments(data))
+        .catch((err) => console.error("Error loading equipments", err));
+    }
+  }, [enteredKey]);
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Equipment Monitoring</h1>
-
-      <input
-        type="password"
-        value={apiKey}
-        onChange={(e) => setApiKey(e.target.value)}
-        placeholder="API-Key"
-        className="w-full p-2 border rounded mb-2"
-      />
-
-      <button
-        onClick={handleLogin}
-        disabled={loading}
-        className={`w-full p-2 rounded ${
-          loading
-            ? "bg-gray-300 text-gray-600"
-            : "bg-blue-600 text-white hover:bg-blue-700"
-        }`}
-      >
-        {loading ? "Lade..." : "Einloggen"}
-      </button>
-
-      {error && <p className="text-red-600 mt-2">{error}</p>}
-
-      <ul className="mt-4 space-y-2">
-        {equipments.map((equip, idx) => (
-          <li
-            key={idx}
-            className="border p-2 rounded cursor-pointer hover:bg-gray-100"
-            onClick={() => setSelectedEquip(equip)}
+      {!enteredKey ? (
+        <div className="flex flex-col items-center gap-2">
+          <input
+            type="text"
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            placeholder="Enter API Key"
+            className="border p-2 rounded w-full max-w-sm"
+          />
+          <button
+            onClick={handleLogin}
+            className="bg-blue-500 text-white p-2 rounded"
           >
-            {equip.hostname || `Equipment ${idx + 1}`}
-          </li>
-        ))}
-      </ul>
-
-      <Modal
-        isOpen={!!selectedEquip}
-        onClose={() => setSelectedEquip(null)}
-        title={selectedEquip?.hostname || "Details"}
-      >
-        <pre className="whitespace-pre-wrap break-words">
-          {JSON.stringify(selectedEquip, null, 2)}
-        </pre>
-      </Modal>
+            Login
+          </button>
+        </div>
+      ) : (
+        <div className="max-h-[80vh] overflow-y-auto">
+          <h2 className="text-xl font-bold mb-2">Equipments</h2>
+          <ul className="space-y-2">
+            {equipments.map((eq, idx) => (
+              <li
+                key={idx}
+                className="border p-2 rounded cursor-pointer hover:bg-gray-100"
+                onClick={() => setSelectedEquipment(eq)}
+              >
+                {eq.name}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {selectedEquipment && (
+        <Modal equipment={selectedEquipment} onClose={() => setSelectedEquipment(null)} />
+      )}
     </div>
   );
 }
