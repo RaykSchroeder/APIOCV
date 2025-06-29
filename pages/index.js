@@ -7,27 +7,22 @@ export default function Home() {
 
   const fetchData = async () => {
     try {
-      const response = await fetch("https://api-eu.oceaview.com/public/api/v1/equipments/monitoring", {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Accept': 'application/json'
-        }
-      });
+      const res = await fetch(`/api/equipments?key=${encodeURIComponent(apiKey)}`);
+      const json = await res.json();
 
-      if (!response.ok) {
-        const text = await response.text();
-        console.error(`API error ${response.status}: ${text}`);
-        setError(`API error ${response.status}: ${text}`);
+      if (!res.ok) {
+        console.error(`Error: ${json.error}`, json.details || '');
+        setError(`Error ${res.status}: ${json.error}`);
+        setData(null);
         return;
       }
 
-      const json = await response.json();
       setData(json);
       setError('');
     } catch (err) {
       console.error('Fetch failed:', err);
       setError('Fetch failed');
+      setData(null);
     }
   };
 
@@ -35,17 +30,14 @@ export default function Home() {
     <div className="p-4">
       <input
         type="text"
-        placeholder="API Key"
         value={apiKey}
         onChange={(e) => setApiKey(e.target.value)}
+        placeholder="API Key"
         className="border rounded p-2 mr-2"
       />
       <button onClick={fetchData} className="bg-blue-500 text-white px-4 py-2 rounded">
         Abrufen
       </button>
 
-      {error && <div style={{ color: 'red' }} className="mt-2">{error}</div>}
-      {data && <pre className="mt-4 bg-gray-100 p-2 rounded">{JSON.stringify(data, null, 2)}</pre>}
-    </div>
-  );
-}
+      {error && <div className="text-red-500 mt-2">{error}</div>}
+      {data && <pre className="bg-gray-100 p-2 m
