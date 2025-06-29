@@ -40,4 +40,11 @@ export default function Home() {
       </button>
 
       {error && <div className="text-red-500 mt-2">{error}</div>}
-      {data && <pre className="bg-gray-100 p-2 m
+      {data && (
+        <pre className="bg-gray-100 p-2 mt-4 rounded">
+          {JSON.stringify(data, null, 2)}
+        </pre>
+      )}
+    </div>
+  );
+}
