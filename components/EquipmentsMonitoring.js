@@ -1,57 +1,67 @@
-import { useEffect, useState } from 'react';
-import Modal from './Modal';
+import React, { useState } from 'react';
 
-export default function EquipmentsMonitoring({ apiKey }) {
-  const [equipments, setEquipments] = useState([]);
-  const [error, setError] = useState(null);
-  const [selectedEquipment, setSelectedEquipment] = useState(null);
+export default function EquipmentsMonitoring() {
+  const [apiKey, setApiKey] = useState('');
+  const [equipments, setEquipments] = useState(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    async function fetchEquipments() {
-      try {
-        const res = await fetch(`/api/equipments?key=${encodeURIComponent(apiKey)}`);
-        if (!res.ok) {
-          throw new Error(`API Fehler: ${res.status}`);
-        }
-        const data = await res.json();
+  const fetchEquipments = async () => {
+    setError('');
+    setEquipments(null);
 
-        if (Array.isArray(data)) {
-          setEquipments(data);
-        } else if (data.equipments && Array.isArray(data.equipments)) {
-          setEquipments(data.equipments);
-        } else {
-          throw new Error('Ungültiges Datenformat von API');
-        }
-      } catch (err) {
-        console.error(err);
-        setError(err.message);
-      }
+    if (!apiKey.trim()) {
+      setError('Bitte API-Key eingeben');
+      return;
     }
 
-    fetchEquipments();
-  }, [apiKey]);
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/equipments?key=${encodeURIComponent(apiKey)}`);
 
-  if (error) {
-    return <div className="text-red-600 p-4">Fehler: {error}</div>;
-  }
+      if (!res.ok) {
+        const err = await res.json();
+        setError(err.error || 'Fehler beim Laden der Daten');
+        setLoading(false);
+        return;
+      }
+
+      const data = await res.json();
+      setEquipments(data);
+      setLoading(false);
+    } catch (e) {
+      setError('Netzwerkfehler');
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold mb-2">Equipments</h2>
-      <ul className="max-h-96 overflow-y-auto border rounded p-2 space-y-1">
-        {equipments.map((eq, idx) => (
-          <li
-            key={idx}
-            className="p-2 border rounded hover:bg-gray-100 cursor-pointer"
-            onClick={() => setSelectedEquipment(eq)}
+    <div className="p-4 max-w-3xl mx-auto">
+      {!equipments && (
+        <>
+          <input
+            type="text"
+            placeholder="API-Key eingeben"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            className="border p-2 rounded w-full mb-2"
+          />
+          <button
+            onClick={fetchEquipments}
+            className="bg-blue-600 text-white p-2 rounded w-full"
+            disabled={loading}
           >
-            {eq.name || 'Unbenanntes Equipment'}
-          </li>
-        ))}
-      </ul>
+            {loading ? 'Lade...' : 'Daten laden'}
+          </button>
+        </>
+      )}
 
-      {selectedEquipment && (
-        <Modal equipment={selectedEquipment} onClose={() => setSelectedEquipment(null)} />
+      {error && <p className="text-red-600 mt-2">{error}</p>}
+
+      {equipments && (
+        <div className="mt-4 max-h-[400px] overflow-auto border p-4 rounded bg-gray-50">
+          <pre>{JSON.stringify(equipments, null, 2)}</pre>
+        </div>
       )}
     </div>
   );
