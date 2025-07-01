@@ -1,3 +1,4 @@
+// pages/api/equipments.js
 export default async function handler(req, res) {
   const { key } = req.query;
 
@@ -10,7 +11,7 @@ export default async function handler(req, res) {
       headers: {
         'X-API-KEY': key,
         'Accept': 'application/json',
-      }
+      },
     });
 
     const data = await response.json();
