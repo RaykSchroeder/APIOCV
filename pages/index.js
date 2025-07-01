@@ -189,76 +189,77 @@ export default function Home() {
         </div>
       )}
 
-      {selectedEquipment && (
-        <div
-          onClick={() => setSelectedEquipment(null)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              backgroundColor: 'white',
-              padding: '1.5rem',
-              borderRadius: '8px',
-              maxWidth: '600px',
-              maxHeight: '80vh',
-              overflowY: 'auto',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            }}
-          >
-            <h2 style={{ fontWeight: '700', marginBottom: '1rem' }}>
-              {selectedEquipment.name}
-            </h2>
-            <p>
-              <strong>Topologie:</strong> {selectedEquipment.topology?.name || '–'}
-            </p>
+{selectedEquipment && (
+  <div
+    onClick={() => setSelectedEquipment(null)}
+    style={{
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+    }}
+  >
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        backgroundColor: 'white',
+        padding: '1.5rem',
+        borderRadius: '8px',
+        maxWidth: '600px',
+        maxHeight: '80vh',
+        overflowY: 'auto',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+      }}
+    >
+      <h2 style={{ fontWeight: '700', marginBottom: '1rem' }}>
+        {selectedEquipment.name}
+      </h2>
+      <p>
+        <strong>Topologie:</strong> {selectedEquipment.topology?.name || '–'}
+      </p>
 
-            <h3 style={{ marginTop: '1.5rem', fontWeight: '600' }}>Data Loggings:</h3>
-            <ul style={{ paddingLeft: '1.5rem', marginTop: '0.5rem' }}>
-              {selectedEquipment.dataLoggings?.map(dl => (
-                <li key={dl.id} style={{ marginBottom: '1rem' }}>
-                  <strong>{dl.name}</strong> — Letzte Messung: {dl.lastReading?.value} {dl.lastReading?.unit} am {dl.lastReading?.date}
-                  <br />
-                  Letzte Kommunikation: {dl.dataLogger?.lastCommunicationDate || '–'}
-                  {dl.ongoingAlarms?.length > 0 && (
-                    <ul style={{ paddingLeft: '1.5rem', marginTop: '0.25rem', color: '#b91c1c' }}>
-                      {dl.ongoingAlarms.map(alarm => (
-                        <li key={alarm.id}>
-                          Alarm seit {new Date(alarm.startDate).toLocaleString()}: {alarm.message}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
-            </ul>
+      <h3 style={{ marginTop: '1.5rem', fontWeight: '600' }}>Data Loggings:</h3>
+      <ul style={{ paddingLeft: '1.5rem', marginTop: '0.5rem' }}>
+        {(selectedEquipment.monitoringData?.dataLoggings || selectedEquipment.dataLoggings || []).map(dl => (
+          <li key={dl.id} style={{ marginBottom: '1rem' }}>
+            <strong>{dl.name}</strong> — Letzte Messung: {dl.lastReading?.value} {dl.lastReading?.unit} am {dl.lastReading?.date}
+            <br />
+            Letzte Kommunikation: {dl.dataLogger?.lastCommunicationDate || '–'}
+            {dl.ongoingAlarms?.length > 0 && (
+              <ul style={{ paddingLeft: '1.5rem', marginTop: '0.25rem', color: '#b91c1c' }}>
+                {dl.ongoingAlarms.map(alarm => (
+                  <li key={alarm.id}>
+                    Alarm seit {new Date(alarm.startDate).toLocaleString()}: {alarm.message || `${alarm.type} (Level ${alarm.level})`}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        ))}
+      </ul>
 
-            <button
-              onClick={() => setSelectedEquipment(null)}
-              style={{
-                marginTop: '1rem',
-                backgroundColor: '#1DB954',
-                color: 'white',
-                border: 'none',
-                padding: '0.5rem 1rem',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontWeight: '600',
-              }}
-            >
-              Schließen
-            </button>
-          </div>
-        </div>
-      )}
+      <button
+        onClick={() => setSelectedEquipment(null)}
+        style={{
+          marginTop: '1rem',
+          backgroundColor: '#1DB954',
+          color: 'white',
+          border: 'none',
+          padding: '0.5rem 1rem',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          fontWeight: '600',
+        }}
+      >
+        Schließen
+      </button>
+    </div>
+  </div>
+)}
+
     </div>
   );
 }
