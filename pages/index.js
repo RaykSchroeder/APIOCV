@@ -1,10 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function Home() {
   const [apiKey, setApiKey] = useState('');
-  const [data, setData] = useState(null);
+  const [data, setData] = useState([]);
   const [error, setError] = useState('');
   const [selectedEquipment, setSelectedEquipment] = useState(null);
+
+  // Filter states
+  const [showAlarms, setShowAlarms] = useState(true);
+  const [showActive, setShowActive] = useState(true);
+  const [showInactive, setShowInactive] = useState(true);
 
   const fetchData = async () => {
     try {
@@ -13,7 +18,7 @@ export default function Home() {
 
       if (!res.ok) {
         setError(json.error || `API error ${res.status}`);
-        setData(null);
+        setData([]);
         return;
       }
 
@@ -23,201 +28,160 @@ export default function Home() {
     } catch (err) {
       console.error('Fetch failed:', err);
       setError('Fetch failed');
-      setData(null);
+      setData([]);
     }
   };
 
-  const getEquipmentColor = (eq) => {
+  // Hilfsfunktion: Prüft, ob Equipment Alarm hat
+  const hasAlarm = (eq) =>
+    eq.dataLoggings?.some(dl => dl.ongoingAlarms?.length > 0);
+
+  // Hilfsfunktion: Prüft, ob Equipment aktiv ist (nach Zeitstempel)
+  const isActive = (eq) => {
     const now = new Date();
-
-    // Prüfen auf aktive Alarme (rot)
-    const alarms = eq.monitoringData?.dataLoggings?.flatMap(dl => dl.ongoingAlarms || []) || [];
-    if (alarms.length > 0) return '#f87171'; // Tailwind red-400 hex
-
-    // Alle relevanten Zeitstempel sammeln
-    const timestamps = eq.monitoringData?.dataLoggings?.flatMap(dl => {
+    const timestamps = eq.dataLoggings?.flatMap(dl => {
       const dates = [];
       if (dl.lastReading?.date) dates.push(new Date(dl.lastReading.date));
       if (dl.dataLogger?.lastCommunicationDate) dates.push(new Date(dl.dataLogger.lastCommunicationDate));
       return dates;
     }) || [];
-
-    if (timestamps.length === 0) {
-      // Keine Zeitstempel - grau
-      return '#9ca3af'; // Tailwind gray-400 hex
-    }
-
-    // Jüngsten Zeitstempel finden
+    if (timestamps.length === 0) return false;
     const mostRecent = new Date(Math.max(...timestamps.map(d => d.getTime())));
     const diffHours = (now - mostRecent) / (1000 * 60 * 60);
+    return diffHours < 48; // aktiv wenn letzte Kommunikation < 48h
+  };
 
-    if (diffHours < 24) {
-      return '#86efac'; // Tailwind green-300 hex
-    } else if (diffHours < 48) {
-      return '#fde68a'; // Tailwind yellow-300 hex
-    } else {
-      return '#9ca3af'; // Tailwind gray-400 hex
+  // Farbe bestimmen
+  const getEquipmentColor = (eq) => {
+    if (hasAlarm(eq)) return '#f87171'; // rot
+    if (isActive(eq)) return '#a3e635'; // grün
+    return '#9ca3af'; // grau
+  };
+
+  // Filter-Logik & Sortierung
+  const filteredAndSortedData = data
+    .filter(eq => {
+      if (hasAlarm(eq) && !showAlarms) return false;
+      if (isActive(eq) && !hasAlarm(eq) && !showActive) return false;
+      if (!isActive(eq) && !hasAlarm(eq) && !showInactive) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      // Alarme zuerst, sortiert nach ältestem Alarmstartdatum
+      const aAlarm = a.dataLoggings?.flatMap(dl => dl.ongoingAlarms || []).sort((x, y) => new Date(x.startDate) - new Date(y.startDate))[0];
+      const bAlarm = b.dataLoggings?.flatMap(dl => dl.ongoingAlarms || []).sort((x, y) => new Date(x.startDate) - new Date(y.startDate))[0];
+      if (aAlarm && !bAlarm) return -1;
+      if (!aAlarm && bAlarm) return 1;
+      if (aAlarm && bAlarm) return new Date(aAlarm.startDate) - new Date(bAlarm.startDate);
+      // Dann aktive ohne Alarm
+      const aActive = isActive(a);
+      const bActive = isActive(b);
+      if (aActive && !bActive) return -1;
+      if (!aActive && bActive) return 1;
+      return 0; // inaktive zuletzt
+    });
+
+  // Styles
+  const styles = {
+    container: { maxWidth: 900, margin: 'auto', padding: 20, fontFamily: 'Arial, sans-serif' },
+    input: { width: '100%', padding: 8, fontSize: 16, marginBottom: 12 },
+    button: { backgroundColor: '#1DB954', color: 'white', border: 'none', padding: '10px 16px', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold' },
+    error: { color: 'red', marginTop: 10 },
+    filters: { display: 'flex', gap: 20, margin: '20px 0', alignItems: 'center' },
+    checkboxLabel: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, cursor: 'pointer' },
+    grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(250px,1fr))', gap: 12 },
+    card: (color) => ({
+      backgroundColor: color,
+      padding: 12,
+      borderRadius: 6,
+      cursor: 'pointer',
+      boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'space-between',
+      height: 140,
+    }),
+    cardTitle: { fontWeight: 'bold', fontSize: 18, marginBottom: 6, color: '#111' },
+    alarmText: { color: '#b91c1c', fontWeight: 'bold', fontSize: 14 },
+    topologyText: { fontSize: 14, color: '#444' },
+    modalBackdrop: {
+      position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+      backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center',
+      zIndex: 1000,
+    },
+    modalContent: {
+      backgroundColor: 'white', borderRadius: 8, padding: 20, maxWidth: 600, maxHeight: '80vh',
+      overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+    },
+    closeButton: {
+      marginTop: 20, backgroundColor: '#dc2626', color: 'white', border: 'none', padding: '10px 16px', borderRadius: 4,
+      cursor: 'pointer', fontWeight: 'bold',
     }
   };
 
-  // Sortierung: Alarme (längster zuerst), dann normal, dann inaktiv
-  const sortedEquipments = (data || []).slice().sort((a, b) => {
-    const getLongestAlarmStart = (eq) => {
-      const alarms = eq.monitoringData?.dataLoggings?.flatMap(dl => dl.ongoingAlarms || []) || [];
-      if (alarms.length === 0) return null;
-      return Math.min(...alarms.map(alarm => new Date(alarm.startDate).getTime()));
-    };
-
-    const aAlarmStart = getLongestAlarmStart(a);
-    const bAlarmStart = getLongestAlarmStart(b);
-
-    if (aAlarmStart && bAlarmStart) {
-      return aAlarmStart - bAlarmStart; // Ältester Alarm zuerst
-    } else if (aAlarmStart) {
-      return -1; // a hat Alarm, b nicht → a zuerst
-    } else if (bAlarmStart) {
-      return 1;  // b hat Alarm, a nicht → b zuerst
-    }
-
-    // Keine Alarme, jetzt normal vs. inaktiv nach Timestamp
-    const getMostRecentTimestamp = (eq) => {
-      const timestamps = eq.monitoringData?.dataLoggings?.flatMap(dl => {
-        const dates = [];
-        if (dl.lastReading?.date) dates.push(new Date(dl.lastReading.date));
-        if (dl.dataLogger?.lastCommunicationDate) dates.push(new Date(dl.dataLogger.lastCommunicationDate));
-        return dates;
-      }) || [];
-      if (timestamps.length === 0) return 0;
-      return Math.max(...timestamps.map(d => d.getTime()));
-    };
-
-    const aTime = getMostRecentTimestamp(a);
-    const bTime = getMostRecentTimestamp(b);
-
-    return bTime - aTime; // Jüngste zuerst
-  });
-
   return (
-    <div style={{ maxWidth: 900, margin: '1rem auto', padding: '0 1rem' }}>
+    <div style={styles.container}>
       <input
         type="text"
         placeholder="API Key"
         value={apiKey}
         onChange={(e) => setApiKey(e.target.value)}
-        style={{
-          border: '1px solid #ccc',
-          padding: '0.5rem 1rem',
-          borderRadius: 6,
-          width: '100%',
-          marginBottom: '0.75rem',
-          fontSize: '1rem',
-        }}
+        style={styles.input}
       />
-      <button
-        onClick={fetchData}
-        style={{
-          backgroundColor: '#1DB954',
-          color: 'white',
-          border: 'none',
-          padding: '0.75rem 1.25rem',
-          borderRadius: 6,
-          cursor: 'pointer',
-          fontWeight: '600',
-          fontSize: '1rem',
-          width: '100%',
-          marginBottom: '1rem',
-        }}
-      >
+      <button onClick={fetchData} style={styles.button}>
         Abrufen
       </button>
+      {error && <div style={styles.error}>{error}</div>}
 
-      {error && <div style={{ color: '#b91c1c', marginBottom: '1rem' }}>{error}</div>}
+      <div style={styles.filters}>
+        <label style={styles.checkboxLabel}>
+          <input type="checkbox" checked={showAlarms} onChange={() => setShowAlarms(!showAlarms)} />
+          Alarme anzeigen
+        </label>
+        <label style={styles.checkboxLabel}>
+          <input type="checkbox" checked={showActive} onChange={() => setShowActive(!showActive)} />
+          Aktive anzeigen
+        </label>
+        <label style={styles.checkboxLabel}>
+          <input type="checkbox" checked={showInactive} onChange={() => setShowInactive(!showInactive)} />
+          Inaktive anzeigen
+        </label>
+      </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '1rem',
-        }}
-      >
-        {sortedEquipments.map((eq) => {
-          const bgColor = getEquipmentColor(eq);
-          const hasAlarm = eq.monitoringData?.dataLoggings?.some(dl => dl.ongoingAlarms?.length > 0);
+      <div style={styles.grid}>
+        {filteredAndSortedData.map(eq => {
+          const color = getEquipmentColor(eq);
           return (
-            <button
+            <div
               key={eq.id}
               onClick={() => setSelectedEquipment(eq)}
-              style={{
-                backgroundColor: bgColor,
-                padding: '1rem',
-                borderRadius: 8,
-                boxShadow: '0 1px 3px rgb(0 0 0 / 0.1)',
-                border: 'none',
-                cursor: 'pointer',
-                textAlign: 'left',
-                minHeight: 110,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                color: '#111',
-              }}
+              style={styles.card(color)}
+              title={eq.name}
             >
-              <h2 style={{ fontWeight: '700', marginBottom: '0.25rem' }}>{eq.name}</h2>
-              {hasAlarm && (
-                <p style={{ color: '#b91c1c', fontWeight: '700', margin: 0 }}>⚠️ Alarm aktiv!</p>
-              )}
-              <p style={{ marginTop: 'auto', fontSize: '0.875rem', color: '#444' }}>
-                Topologie: {eq.topology?.name || '–'}
-              </p>
-            </button>
+              <div style={styles.cardTitle}>{eq.name}</div>
+              {hasAlarm(eq) && <div style={styles.alarmText}>⚠️ Alarm aktiv!</div>}
+              <div style={styles.topologyText}>Topologie: {eq.topology?.name || '–'}</div>
+            </div>
           );
         })}
       </div>
 
       {selectedEquipment && (
-        <div
-          onClick={() => setSelectedEquipment(null)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              backgroundColor: 'white',
-              padding: '1.5rem',
-              borderRadius: '8px',
-              maxWidth: '600px',
-              maxHeight: '80vh',
-              overflowY: 'auto',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            }}
-          >
-            <h2 style={{ fontWeight: '700', marginBottom: '1rem' }}>
-              {selectedEquipment.name}
-            </h2>
-            <p>
-              <strong>Topologie:</strong> {selectedEquipment.topology?.name || '–'}
-            </p>
-
-            <h3 style={{ marginTop: '1.5rem', fontWeight: '600' }}>Data Loggings:</h3>
-            <ul style={{ paddingLeft: '1.5rem', marginTop: '0.5rem' }}>
-              {(selectedEquipment.monitoringData?.dataLoggings || selectedEquipment.dataLoggings || []).map(dl => (
-                <li key={dl.id} style={{ marginBottom: '1rem' }}>
-                  <strong>{dl.name}</strong> — Letzte Messung: {dl.lastReading?.value} {dl.lastReading?.unit} am {dl.lastReading?.date}
-                  <br />
+        <div style={styles.modalBackdrop} onClick={() => setSelectedEquipment(null)}>
+          <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
+            <h2>{selectedEquipment.name}</h2>
+            <p><strong>Topologie:</strong> {selectedEquipment.topology?.name || '–'}</p>
+            <h3>Data Loggings:</h3>
+            <ul>
+              {selectedEquipment.dataLoggings?.map(dl => (
+                <li key={dl.id} style={{ marginBottom: 10 }}>
+                  <strong>{dl.name}</strong> — Letzte Messung: {dl.lastReading?.value} {dl.lastReading?.unit} am {dl.lastReading?.date}<br />
                   Letzte Kommunikation: {dl.dataLogger?.lastCommunicationDate || '–'}
                   {dl.ongoingAlarms?.length > 0 && (
-                    <ul style={{ paddingLeft: '1.5rem', marginTop: '0.25rem', color: '#b91c1c' }}>
+                    <ul style={{ marginLeft: 20, marginTop: 4, color: '#b91c1c' }}>
                       {dl.ongoingAlarms.map(alarm => (
                         <li key={alarm.id}>
-                          Alarm seit {new Date(alarm.startDate).toLocaleString()}: {alarm.message || `${alarm.type} (Level ${alarm.level})`}
+                          Alarm Level: {alarm.level}, Typ: {alarm.type}, Start: {alarm.startDate}
                         </li>
                       ))}
                     </ul>
@@ -225,22 +189,7 @@ export default function Home() {
                 </li>
               ))}
             </ul>
-
-            <button
-              onClick={() => setSelectedEquipment(null)}
-              style={{
-                marginTop: '1rem',
-                backgroundColor: '#1DB954',
-                color: 'white',
-                border: 'none',
-                padding: '0.5rem 1rem',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontWeight: '600',
-              }}
-            >
-              Schließen
-            </button>
+            <button style={styles.closeButton} onClick={() => setSelectedEquipment(null)}>Schließen</button>
           </div>
         </div>
       )}
