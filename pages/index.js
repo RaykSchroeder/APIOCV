@@ -19,7 +19,7 @@ export default function Home() {
 
       setData(json);
       setError('');
-      setSelectedEquipment(null);
+      setSelectedEquipment(null); // Reset Modal bei neuem Abruf
     } catch (err) {
       console.error('Fetch failed:', err);
       setError('Fetch failed');
@@ -28,26 +28,32 @@ export default function Home() {
   };
 
   const getEquipmentColor = (eq) => {
-    // Prüfe auf Alarm in DataLoggings
-    const hasOtherAlarm = eq.dataLoggings?.some(dl => dl.ongoingAlarms.length > 0);
-    if (hasOtherAlarm) return 'bg-blue-300';
-
-    // Prüfe Timestamp (letzte Messung)
     const now = new Date();
-    const timestamps = eq.dataLoggings?.map(dl => new Date(dl.lastReading.date)) || [];
-    const mostRecent = timestamps.length > 0 ? new Date(Math.max(...timestamps)) : null;
 
-    if (mostRecent) {
-      const diffHours = (now - mostRecent) / (1000 * 60 * 60);
-      if (diffHours < 24) {
-        return 'bg-orange-300';
-      } else {
-        return 'bg-red-300';
-      }
+    // Prüfen ob irgendein Alarm aktiv ist
+    const hasAlarm = eq.dataLoggings?.some(dl => dl.ongoingAlarms?.length > 0);
+    if (hasAlarm) return 'bg-blue-300';
+
+    // Alle relevanten Timestamps sammeln
+    const timestamps = eq.dataLoggings?.flatMap(dl => {
+      const dates = [];
+      if (dl.lastReading?.date) dates.push(new Date(dl.lastReading.date));
+      if (dl.dataLogger?.lastCommunicationDate) dates.push(new Date(dl.dataLogger.lastCommunicationDate));
+      return dates;
+    }) || [];
+
+    if (timestamps.length === 0) {
+      return 'bg-red-300'; // Kein Timestamp = kritisch
     }
 
-    // Kein Alarm, keine Messung älter als 1 Tag
-    return 'bg-green-300';
+    const mostRecent = new Date(Math.max(...timestamps.map(d => d.getTime())));
+    const diffHours = (now - mostRecent) / (1000 * 60 * 60);
+
+    if (diffHours < 24) {
+      return 'bg-orange-300';
+    } else {
+      return 'bg-red-300';
+    }
   };
 
   return (
@@ -65,6 +71,7 @@ export default function Home() {
       >
         Abrufen
       </button>
+
       {error && <div className="text-red-500 mt-2">{error}</div>}
 
       {data && Array.isArray(data) && (
@@ -91,18 +98,22 @@ export default function Home() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-xl font-bold mb-4">{selectedEquipment.name}</h2>
-            <p><strong>Topology:</strong> {selectedEquipment.topology?.name || '–'}</p>
+            <p>
+              <strong>Topology:</strong> {selectedEquipment.topology?.name || '–'}
+            </p>
 
             <h3 className="mt-4 font-semibold">Data Loggings:</h3>
             <ul className="list-disc ml-6">
               {selectedEquipment.dataLoggings?.map((dl) => (
                 <li key={dl.id} className="mb-2">
-                  <strong>{dl.name}</strong> — Letzte Messung: {dl.lastReading.value} {dl.lastReading.unit} am {dl.lastReading.date}
-                  {dl.ongoingAlarms.length > 0 && (
+                  <strong>{dl.name}</strong> — Letzte Messung: {dl.lastReading?.value} {dl.lastReading?.unit} am {dl.lastReading?.date}
+                  <br />
+                  Letzte Kommunikation: {dl.dataLogger?.lastCommunicationDate || '–'}
+                  {dl.ongoingAlarms?.length > 0 && (
                     <ul className="list-decimal ml-4 mt-1 text-red-600">
                       {dl.ongoingAlarms.map((alarm) => (
                         <li key={alarm.id}>
-                          Alarm Level: {alarm.level}, Typ: {alarm.type}
+                          Alarm Level: {alarm.level}, Typ: {alarm.type}, Start: {alarm.startDate}
                         </li>
                       ))}
                     </ul>
