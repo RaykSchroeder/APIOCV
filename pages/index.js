@@ -30,11 +30,11 @@ export default function Home() {
   const getEquipmentColor = (eq) => {
     const now = new Date();
 
-    // Prüfen, ob irgendein Alarm aktiv ist
-    const hasAlarm = eq.dataLoggings?.some(dl => dl.ongoingAlarms?.length > 0);
-    if (hasAlarm) return 'bg-blue-300';
+    // Prüfen, ob ein anderer Alarm vorliegt (anders als "kein Alarm")
+    const hasAnyAlarm = eq.dataLoggings?.some(dl => dl.ongoingAlarms && dl.ongoingAlarms.length > 0);
+    if (hasAnyAlarm) return 'bg-blue-300';
 
-    // Alle relevanten Timestamps sammeln
+    // Wenn kein Alarm da ist, prüfen wir die Zeitstempel
     const timestamps = eq.dataLoggings?.flatMap(dl => {
       const dates = [];
       if (dl.lastReading?.date) dates.push(new Date(dl.lastReading.date));
@@ -43,17 +43,23 @@ export default function Home() {
     }) || [];
 
     if (timestamps.length === 0) {
-      return 'bg-red-300'; // Keine Daten = kritisch
+      // Keine Zeitstempel = rot (kritisch)
+      return 'bg-red-300';
     }
 
     const mostRecent = new Date(Math.max(...timestamps.map(d => d.getTime())));
     const diffHours = (now - mostRecent) / (1000 * 60 * 60);
 
     if (diffHours < 24) {
+      // Letzter Zeitstempel < 1 Tag → orange
       return 'bg-orange-300';
     } else {
+      // Letzter Zeitstempel > 1 Tag → rot
       return 'bg-red-300';
     }
+
+    // Wenn keine der Bedingungen passt, grün (z.B. kein Alarm und aktuell)
+    // Aber in dieser Logik haben wir das bereits abgefangen.
   };
 
   return (
@@ -76,15 +82,19 @@ export default function Home() {
 
       {data && Array.isArray(data) && (
         <div className="mt-4 space-y-2 max-h-64 overflow-auto border p-2 rounded">
-          {data.map((eq) => (
-            <button
-              key={eq.id}
-              className={`block w-full text-left px-3 py-2 rounded ${getEquipmentColor(eq)} hover:opacity-80`}
-              onClick={() => setSelectedEquipment(eq)}
-            >
-              {eq.name}
-            </button>
-          ))}
+          {data.map((eq) => {
+            // Farbe bestimmen
+            const color = getEquipmentColor(eq);
+            return (
+              <button
+                key={eq.id}
+                className={`block w-full text-left px-3 py-2 rounded ${color} hover:opacity-80`}
+                onClick={() => setSelectedEquipment(eq)}
+              >
+                {eq.name}
+              </button>
+            );
+          })}
         </div>
       )}
 
