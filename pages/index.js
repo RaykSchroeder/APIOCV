@@ -19,7 +19,7 @@ export default function Home() {
 
       setData(json);
       setError('');
-      setSelectedEquipment(null); // Reset Modal bei neuem Abruf
+      setSelectedEquipment(null);
     } catch (err) {
       console.error('Fetch failed:', err);
       setError('Fetch failed');
@@ -30,7 +30,7 @@ export default function Home() {
   const getEquipmentColor = (eq) => {
     const now = new Date();
 
-    // Prüfen ob irgendein Alarm aktiv ist
+    // Prüfen, ob irgendein Alarm aktiv ist
     const hasAlarm = eq.dataLoggings?.some(dl => dl.ongoingAlarms?.length > 0);
     if (hasAlarm) return 'bg-blue-300';
 
@@ -43,7 +43,7 @@ export default function Home() {
     }) || [];
 
     if (timestamps.length === 0) {
-      return 'bg-red-300'; // Kein Timestamp = kritisch
+      return 'bg-red-300'; // Keine Daten = kritisch
     }
 
     const mostRecent = new Date(Math.max(...timestamps.map(d => d.getTime())));
