@@ -19,12 +19,35 @@ export default function Home() {
 
       setData(json);
       setError('');
-      setSelectedEquipment(null); // Reset Modal wenn neue Daten geladen werden
+      setSelectedEquipment(null);
     } catch (err) {
       console.error('Fetch failed:', err);
       setError('Fetch failed');
       setData(null);
     }
+  };
+
+  const getEquipmentColor = (eq) => {
+    // Prüfe auf Alarm in DataLoggings
+    const hasOtherAlarm = eq.dataLoggings?.some(dl => dl.ongoingAlarms.length > 0);
+    if (hasOtherAlarm) return 'bg-blue-300';
+
+    // Prüfe Timestamp (letzte Messung)
+    const now = new Date();
+    const timestamps = eq.dataLoggings?.map(dl => new Date(dl.lastReading.date)) || [];
+    const mostRecent = timestamps.length > 0 ? new Date(Math.max(...timestamps)) : null;
+
+    if (mostRecent) {
+      const diffHours = (now - mostRecent) / (1000 * 60 * 60);
+      if (diffHours < 24) {
+        return 'bg-orange-300';
+      } else {
+        return 'bg-red-300';
+      }
+    }
+
+    // Kein Alarm, keine Messung älter als 1 Tag
+    return 'bg-green-300';
   };
 
   return (
@@ -44,13 +67,12 @@ export default function Home() {
       </button>
       {error && <div className="text-red-500 mt-2">{error}</div>}
 
-      {/* Wenn Daten da sind: Liste von Equipment-Buttons */}
       {data && Array.isArray(data) && (
         <div className="mt-4 space-y-2 max-h-64 overflow-auto border p-2 rounded">
           {data.map((eq) => (
             <button
               key={eq.id}
-              className="block w-full text-left px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded"
+              className={`block w-full text-left px-3 py-2 rounded ${getEquipmentColor(eq)} hover:opacity-80`}
               onClick={() => setSelectedEquipment(eq)}
             >
               {eq.name}
@@ -59,15 +81,14 @@ export default function Home() {
         </div>
       )}
 
-      {/* Modal / Popup mit Details */}
       {selectedEquipment && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-          onClick={() => setSelectedEquipment(null)} // Klick auf Hintergrund schließt Modal
+          onClick={() => setSelectedEquipment(null)}
         >
           <div
             className="bg-white p-6 rounded max-w-xl max-h-[80vh] overflow-auto"
-            onClick={(e) => e.stopPropagation()} // Klick in Modal stoppt das Schließen
+            onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-xl font-bold mb-4">{selectedEquipment.name}</h2>
             <p><strong>Topology:</strong> {selectedEquipment.topology?.name || '–'}</p>
