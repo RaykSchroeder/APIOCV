@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export default function Home() {
   const [apiKey, setApiKey] = useState('');
@@ -6,7 +6,6 @@ export default function Home() {
   const [error, setError] = useState('');
   const [selectedEquipment, setSelectedEquipment] = useState(null);
 
-  // Filter states
   const [showAlarms, setShowAlarms] = useState(true);
   const [showActive, setShowActive] = useState(true);
   const [showInactive, setShowInactive] = useState(true);
@@ -32,11 +31,9 @@ export default function Home() {
     }
   };
 
-  // Hilfsfunktion: Prüft, ob Equipment Alarm hat
   const hasAlarm = (eq) =>
     eq.dataLoggings?.some(dl => dl.ongoingAlarms?.length > 0);
 
-  // Hilfsfunktion: Prüft, ob Equipment aktiv ist (nach Zeitstempel)
   const isActive = (eq) => {
     const now = new Date();
     const timestamps = eq.dataLoggings?.flatMap(dl => {
@@ -48,40 +45,44 @@ export default function Home() {
     if (timestamps.length === 0) return false;
     const mostRecent = new Date(Math.max(...timestamps.map(d => d.getTime())));
     const diffHours = (now - mostRecent) / (1000 * 60 * 60);
-    return diffHours < 48; // aktiv wenn letzte Kommunikation < 48h
+    return diffHours < 48;
   };
 
-  // Farbe bestimmen
   const getEquipmentColor = (eq) => {
     if (hasAlarm(eq)) return '#f87171'; // rot
     if (isActive(eq)) return '#a3e635'; // grün
     return '#9ca3af'; // grau
   };
 
-  // Filter-Logik & Sortierung
   const filteredAndSortedData = data
     .filter(eq => {
-      if (hasAlarm(eq) && !showAlarms) return false;
-      if (isActive(eq) && !hasAlarm(eq) && !showActive) return false;
-      if (!isActive(eq) && !hasAlarm(eq) && !showInactive) return false;
+      const alarm = hasAlarm(eq);
+      const active = isActive(eq);
+
+      if (alarm && !showAlarms) return false;
+      if (active && !alarm && !showActive) return false;
+      if (!active && !alarm && !showInactive) return false;
       return true;
     })
     .sort((a, b) => {
-      // Alarme zuerst, sortiert nach ältestem Alarmstartdatum
-      const aAlarm = a.dataLoggings?.flatMap(dl => dl.ongoingAlarms || []).sort((x, y) => new Date(x.startDate) - new Date(y.startDate))[0];
-      const bAlarm = b.dataLoggings?.flatMap(dl => dl.ongoingAlarms || []).sort((x, y) => new Date(x.startDate) - new Date(y.startDate))[0];
+      const aAlarms = a.dataLoggings?.flatMap(dl => dl.ongoingAlarms || []);
+      const bAlarms = b.dataLoggings?.flatMap(dl => dl.ongoingAlarms || []);
+      const aAlarm = aAlarms.length > 0 ? aAlarms.sort((x, y) => new Date(x.startDate) - new Date(y.startDate))[0] : null;
+      const bAlarm = bAlarms.length > 0 ? bAlarms.sort((x, y) => new Date(x.startDate) - new Date(y.startDate))[0] : null;
+
       if (aAlarm && !bAlarm) return -1;
       if (!aAlarm && bAlarm) return 1;
       if (aAlarm && bAlarm) return new Date(aAlarm.startDate) - new Date(bAlarm.startDate);
-      // Dann aktive ohne Alarm
+
       const aActive = isActive(a);
       const bActive = isActive(b);
+
       if (aActive && !bActive) return -1;
       if (!aActive && bActive) return 1;
-      return 0; // inaktive zuletzt
+
+      return 0;
     });
 
-  // Styles
   const styles = {
     container: { maxWidth: 900, margin: 'auto', padding: 20, fontFamily: 'Arial, sans-serif' },
     input: { width: '100%', padding: 8, fontSize: 16, marginBottom: 12 },
