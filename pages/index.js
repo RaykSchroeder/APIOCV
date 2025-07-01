@@ -30,11 +30,9 @@ export default function Home() {
   const getEquipmentColor = (eq) => {
     const now = new Date();
 
-    // Prüfen, ob ein anderer Alarm vorliegt (anders als "kein Alarm")
     const hasAnyAlarm = eq.dataLoggings?.some(dl => dl.ongoingAlarms && dl.ongoingAlarms.length > 0);
-    if (hasAnyAlarm) return 'bg-blue-300';
+    if (hasAnyAlarm) return 'bg-red-300'; // Rot bei Alarm
 
-    // Wenn kein Alarm da ist, prüfen wir die Zeitstempel
     const timestamps = eq.dataLoggings?.flatMap(dl => {
       const dates = [];
       if (dl.lastReading?.date) dates.push(new Date(dl.lastReading.date));
@@ -43,55 +41,56 @@ export default function Home() {
     }) || [];
 
     if (timestamps.length === 0) {
-      // Keine Zeitstempel = rot (kritisch)
-      return 'bg-red-300';
+      return 'bg-red-300'; // kritisch
     }
 
     const mostRecent = new Date(Math.max(...timestamps.map(d => d.getTime())));
     const diffHours = (now - mostRecent) / (1000 * 60 * 60);
 
     if (diffHours < 24) {
-      // Letzter Zeitstempel < 1 Tag → orange
-      return 'bg-orange-300';
+      return 'bg-green-300'; // aktuell / grün
+    } else if (diffHours < 48) {
+      return 'bg-yellow-300'; // älter / gelb
     } else {
-      // Letzter Zeitstempel > 1 Tag → rot
-      return 'bg-red-300';
+      return 'bg-red-300'; // zu alt / rot
     }
-
-    // Wenn keine der Bedingungen passt, grün (z.B. kein Alarm und aktuell)
-    // Aber in dieser Logik haben wir das bereits abgefangen.
   };
 
   return (
-    <div className="p-4">
+    <div className="p-4 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">Equipment Monitoring</h1>
+
       <input
         type="text"
-        placeholder="API Key"
+        placeholder="API Key eingeben"
         value={apiKey}
         onChange={(e) => setApiKey(e.target.value)}
-        className="border p-2 mb-2 w-full"
+        className="border p-2 mb-2 w-full rounded"
       />
       <button
         onClick={fetchData}
-        className="bg-blue-500 text-white px-4 py-2 rounded"
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
       >
-        Abrufen
+        Daten abrufen
       </button>
 
-      {error && <div className="text-red-500 mt-2">{error}</div>}
+      {error && <p className="text-red-600 mt-2">{error}</p>}
 
       {data && Array.isArray(data) && (
-        <div className="mt-4 space-y-2 max-h-64 overflow-auto border p-2 rounded">
-          {data.map((eq) => {
-            // Farbe bestimmen
-            const color = getEquipmentColor(eq);
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 max-h-[60vh] overflow-auto">
+          {data.map(eq => {
+            const colorClass = getEquipmentColor(eq);
             return (
               <button
                 key={eq.id}
-                className={`block w-full text-left px-3 py-2 rounded ${color} hover:opacity-80`}
                 onClick={() => setSelectedEquipment(eq)}
+                className={`${colorClass} p-4 rounded shadow hover:opacity-80 text-left`}
               >
-                {eq.name}
+                <h2 className="font-semibold">{eq.name}</h2>
+                {eq.dataLoggings?.some(dl => dl.ongoingAlarms?.length > 0) && (
+                  <p className="text-red-700 font-bold mt-1">⚠️ Alarm aktiv!</p>
+                )}
+                <p className="text-sm text-gray-700 mt-2">Topologie: {eq.topology?.name || '–'}</p>
               </button>
             );
           })}
@@ -100,33 +99,37 @@ export default function Home() {
 
       {selectedEquipment && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
           onClick={() => setSelectedEquipment(null)}
         >
           <div
-            className="bg-white p-6 rounded max-w-xl max-h-[80vh] overflow-auto"
+            className="bg-white p-6 rounded max-w-xl max-h-[80vh] overflow-auto shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-xl font-bold mb-4">{selectedEquipment.name}</h2>
-            <p>
-              <strong>Topology:</strong> {selectedEquipment.topology?.name || '–'}
-            </p>
+            <p><strong>Topologie:</strong> {selectedEquipment.topology?.name || '–'}</p>
 
             <h3 className="mt-4 font-semibold">Data Loggings:</h3>
             <ul className="list-disc ml-6">
-              {selectedEquipment.dataLoggings?.map((dl) => (
-                <li key={dl.id} className="mb-2">
-                  <strong>{dl.name}</strong> — Letzte Messung: {dl.lastReading?.value} {dl.lastReading?.unit} am {dl.lastReading?.date}
-                  <br />
-                  Letzte Kommunikation: {dl.dataLogger?.lastCommunicationDate || '–'}
-                  {dl.ongoingAlarms?.length > 0 && (
-                    <ul className="list-decimal ml-4 mt-1 text-red-600">
-                      {dl.ongoingAlarms.map((alarm) => (
-                        <li key={alarm.id}>
-                          Alarm Level: {alarm.level}, Typ: {alarm.type}, Start: {alarm.startDate}
-                        </li>
-                      ))}
-                    </ul>
+              {selectedEquipment.dataLoggings?.map(dl => (
+                <li key={dl.id} className="mb-3">
+                  <strong>{dl.name}</strong> ({dl.physicalParameter})<br />
+                  Letzte Messung: {dl.lastReading?.value} {dl.lastReading?.unit} am {new Date(dl.lastReading?.date).toLocaleString()}<br />
+                  DataLogger SN: {dl.dataLogger?.serialNumber}<br />
+                  Letzte Kommunikation: {new Date(dl.dataLogger?.lastCommunicationDate).toLocaleString()}<br />
+                  {dl.ongoingAlarms?.length > 0 ? (
+                    <>
+                      <strong className="text-red-600">Aktive Alarme:</strong>
+                      <ul className="list-decimal ml-5 text-red-600 mt-1">
+                        {dl.ongoingAlarms.map(alarm => (
+                          <li key={alarm.id}>
+                            Level: {alarm.level}, Typ: {alarm.type}, Start: {new Date(alarm.startDate).toLocaleString()}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : (
+                    <p>Keine aktiven Alarme</p>
                   )}
                 </li>
               ))}
@@ -134,7 +137,7 @@ export default function Home() {
 
             <button
               onClick={() => setSelectedEquipment(null)}
-              className="mt-6 bg-red-500 text-white px-4 py-2 rounded"
+              className="mt-4 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
             >
               Schließen
             </button>
