@@ -27,147 +27,82 @@ export default function Home() {
     }
   };
 
-  const getEquipmentStyle = (eq) => {
-    const hasAnyAlarm = eq.dataLoggings?.some(dl => dl.ongoingAlarms?.length > 0);
-    if (hasAnyAlarm) {
-      return {
-        backgroundColor: '#F87171', // rot
-        color: 'white',
-        padding: '1rem',
-        borderRadius: '0.375rem',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        cursor: 'pointer',
-        textAlign: 'left',
-        width: '100%',
-        border: 'none',
-        marginBottom: '0.5rem',
-      };
+  const getEquipmentColor = (eq) => {
+    if (!eq.isActive) {
+      return 'bg-gray-300 text-gray-600 cursor-not-allowed';
     }
 
+    // Nutze Monitoring-Daten, falls vorhanden, sonst eq.dataLoggings
+    const dataLoggings = eq.monitoringData?.dataLoggings || eq.dataLoggings || [];
     const now = new Date();
-    const timestamps = eq.dataLoggings?.flatMap(dl => {
+
+    // Prüfen auf aktive Alarme (rot)
+    const hasAnyAlarm = dataLoggings.some(dl => dl.ongoingAlarms?.length > 0);
+    if (hasAnyAlarm) return 'bg-red-300 text-red-800';
+
+    // Alle relevanten Zeitstempel sammeln
+    const timestamps = dataLoggings.flatMap(dl => {
       const dates = [];
       if (dl.lastReading?.date) dates.push(new Date(dl.lastReading.date));
       if (dl.dataLogger?.lastCommunicationDate) dates.push(new Date(dl.dataLogger.lastCommunicationDate));
       return dates;
-    }) || [];
+    });
 
     if (timestamps.length === 0) {
-      return {
-        backgroundColor: '#F87171', // rot
-        color: 'white',
-        padding: '1rem',
-        borderRadius: '0.375rem',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        cursor: 'pointer',
-        textAlign: 'left',
-        width: '100%',
-        border: 'none',
-        marginBottom: '0.5rem',
-      };
+      // Keine Zeitstempel - kritisch (rot)
+      return 'bg-red-300 text-red-800';
     }
 
+    // Jüngsten Zeitstempel finden
     const mostRecent = new Date(Math.max(...timestamps.map(d => d.getTime())));
     const diffHours = (now - mostRecent) / (1000 * 60 * 60);
 
     if (diffHours < 24) {
-      return {
-        backgroundColor: '#86EFAC', // grün
-        color: 'black',
-        padding: '1rem',
-        borderRadius: '0.375rem',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        cursor: 'pointer',
-        textAlign: 'left',
-        width: '100%',
-        border: 'none',
-        marginBottom: '0.5rem',
-      };
+      return 'bg-green-300 text-green-800';
     } else if (diffHours < 48) {
-      return {
-        backgroundColor: '#FDE68A', // gelb
-        color: 'black',
-        padding: '1rem',
-        borderRadius: '0.375rem',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        cursor: 'pointer',
-        textAlign: 'left',
-        width: '100%',
-        border: 'none',
-        marginBottom: '0.5rem',
-      };
+      return 'bg-yellow-300 text-yellow-800';
     } else {
-      return {
-        backgroundColor: '#F87171', // rot
-        color: 'white',
-        padding: '1rem',
-        borderRadius: '0.375rem',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        cursor: 'pointer',
-        textAlign: 'left',
-        width: '100%',
-        border: 'none',
-        marginBottom: '0.5rem',
-      };
+      return 'bg-red-300 text-red-800';
     }
   };
 
   return (
-    <div style={{ padding: '1rem', maxWidth: '640px', margin: '0 auto' }}>
+    <div className="p-4 max-w-3xl mx-auto">
       <input
         type="text"
         placeholder="API Key"
         value={apiKey}
         onChange={(e) => setApiKey(e.target.value)}
-        style={{
-          border: '1px solid #ccc',
-          padding: '0.5rem',
-          marginBottom: '1rem',
-          width: '100%',
-          borderRadius: '0.375rem',
-          fontSize: '1rem',
-        }}
+        className="border p-2 mb-4 w-full rounded"
       />
       <button
         onClick={fetchData}
-        style={{
-          backgroundColor: '#2563EB', // blau
-          color: 'white',
-          padding: '0.5rem 1rem',
-          borderRadius: '0.375rem',
-          border: 'none',
-          cursor: 'pointer',
-          fontSize: '1rem',
-          fontWeight: '600',
-        }}
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
       >
         Abrufen
       </button>
 
-      {error && (
-        <div style={{ color: '#DC2626', marginTop: '1rem', fontWeight: '600' }}>
-          {error}
-        </div>
-      )}
+      {error && <div className="text-red-600 mt-2">{error}</div>}
 
       {data && Array.isArray(data) && (
-        <div style={{ marginTop: '1rem', maxHeight: '24rem', overflowY: 'auto' }}>
+        <div className="mt-4 space-y-2">
           {data.map(eq => {
-            const style = getEquipmentStyle(eq);
+            const colorClass = getEquipmentColor(eq);
             return (
               <button
                 key={eq.id}
-                onClick={() => setSelectedEquipment(eq)}
-                style={style}
-                type="button"
+                onClick={() => eq.isActive && setSelectedEquipment(eq)}
+                className={`${colorClass} p-4 rounded shadow hover:opacity-80 text-left w-full disabled:opacity-50`}
+                disabled={!eq.isActive}
               >
-                <h2 style={{ fontWeight: '600', margin: 0 }}>{eq.name}</h2>
-                {eq.dataLoggings?.some(dl => dl.ongoingAlarms?.length > 0) && (
-                  <p style={{ color: '#B91C1C', fontWeight: '700', marginTop: '0.25rem' }}>
-                    ⚠️ Alarm aktiv!
-                  </p>
+                <h2 className="font-semibold">{eq.name}</h2>
+                {eq.isActive && eq.monitoringData?.dataLoggings?.some(dl => dl.ongoingAlarms?.length > 0) && (
+                  <p className="text-red-700 font-bold mt-1">⚠️ Alarm aktiv!</p>
                 )}
-                <p style={{ fontSize: '0.875rem', color: '#374151', marginTop: '0.5rem' }}>
+                {!eq.isActive && (
+                  <p className="italic text-gray-500 mt-1">Inaktiv</p>
+                )}
+                <p className="text-sm mt-2">
                   Topologie: {eq.topology?.name || '–'}
                 </p>
               </button>
@@ -178,45 +113,27 @@ export default function Home() {
 
       {selectedEquipment && (
         <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
           onClick={() => setSelectedEquipment(null)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 50,
-          }}
         >
           <div
+            className="bg-white p-6 rounded max-w-xl max-h-[80vh] overflow-auto shadow-lg"
             onClick={(e) => e.stopPropagation()}
-            style={{
-              backgroundColor: 'white',
-              padding: '1.5rem',
-              borderRadius: '0.5rem',
-              maxWidth: '480px',
-              maxHeight: '80vh',
-              overflowY: 'auto',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
-            }}
           >
-            <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '1rem' }}>
-              {selectedEquipment.name}
-            </h2>
+            <h2 className="text-xl font-bold mb-4">{selectedEquipment.name}</h2>
             <p>
               <strong>Topologie:</strong> {selectedEquipment.topology?.name || '–'}
             </p>
 
-            <h3 style={{ marginTop: '1rem', fontWeight: '600' }}>Data Loggings:</h3>
-            <ul style={{ marginLeft: '1.5rem' }}>
-              {selectedEquipment.dataLoggings?.map((dl) => (
-                <li key={dl.id} style={{ marginBottom: '0.5rem' }}>
+            <h3 className="mt-4 font-semibold">Data Loggings:</h3>
+            <ul className="list-disc ml-6">
+              {(selectedEquipment.monitoringData?.dataLoggings || selectedEquipment.dataLoggings || []).map((dl) => (
+                <li key={dl.id} className="mb-2">
                   <strong>{dl.name}</strong> — Letzte Messung: {dl.lastReading?.value} {dl.lastReading?.unit} am {dl.lastReading?.date}
                   <br />
                   Letzte Kommunikation: {dl.dataLogger?.lastCommunicationDate || '–'}
                   {dl.ongoingAlarms?.length > 0 && (
-                    <ul style={{ marginLeft: '1.5rem', marginTop: '0.25rem', color: '#B91C1C', listStyleType: 'decimal' }}>
+                    <ul className="list-decimal ml-4 mt-1 text-red-600">
                       {dl.ongoingAlarms.map((alarm) => (
                         <li key={alarm.id}>
                           Alarm Level: {alarm.level}, Typ: {alarm.type}, Start: {alarm.startDate}
@@ -230,16 +147,7 @@ export default function Home() {
 
             <button
               onClick={() => setSelectedEquipment(null)}
-              style={{
-                marginTop: '1.5rem',
-                backgroundColor: '#DC2626',
-                color: 'white',
-                padding: '0.5rem 1rem',
-                borderRadius: '0.375rem',
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: '600',
-              }}
+              className="mt-6 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
             >
               Schließen
             </button>
