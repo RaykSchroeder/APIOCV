@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function Home() {
   const [apiKey, setApiKey] = useState('');
@@ -26,6 +26,22 @@ export default function Home() {
       setData(null);
     }
   };
+
+  // useEffect für automatisches Nachladen alle 10 Minuten (600000 ms)
+  useEffect(() => {
+    if (!apiKey) return; // Wenn kein apiKey gesetzt ist, nicht laden
+
+    fetchData(); // Daten sofort laden beim Setzen des API Key
+
+    const intervalId = setInterval(() => {
+      fetchData();
+    }, 600000); // 600000ms = 10 Minuten
+
+    return () => clearInterval(intervalId); // Clean-up beim Unmount oder Key-Änderung
+  }, [apiKey]);
+
+  // ... der Rest deines Codes bleibt gleich ...
+
 
   const getEquipmentColor = (eq) => {
     const now = new Date();
