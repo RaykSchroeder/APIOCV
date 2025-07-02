@@ -55,25 +55,47 @@ export default function Home() {
       const alarmStartTimes = alarms.map(alarm => toBerlinTime(alarm.startDate).getTime());
       const oldestAlarm = Math.min(...alarmStartTimes);
       const hoursSinceAlarm = (now - new Date(oldestAlarm)) / (1000 * 60 * 60);
-      return hoursSinceAlarm > 24 ? '#b91c1c' : '#f97316'; // rot oder orange
+
+      if (hoursSinceAlarm > 24) {
+        return '#b91c1c'; // rot
+      }
+
+      // Kommunikation prüfen
+      const timestamps = eq.monitoringData?.dataLoggings?.flatMap(dl => {
+        const dates = [];
+        if (dl.lastReading?.date) dates.push(toBerlinTime(dl.lastReading.date));
+        if (dl.dataLogger?.lastCommunicationDate) dates.push(toBerlinTime(dl.dataLogger.lastCommunicationDate));
+        return dates;
+      }) || [];
+
+      if (timestamps.length === 0) {
+        return '#9ca3af'; // grau
+      }
+
+      const mostRecent = new Date(Math.max(...timestamps.map(d => d.getTime())));
+      const diffMinutes = (now - mostRecent) / (1000 * 60);
+
+      if (diffMinutes > 60) {
+        return '#b91c1c'; // rot wegen Kommunikation
+      } else {
+        return '#f97316'; // orange wegen Alarm aktiv
+      }
     }
 
-    // Timestamps sammeln
-    const timestamps = eq.monitoringData?.dataLoggings?.map(dl => {
+    // KEIN Alarm → nur Kommunikation prüfen
+    const timestamps = eq.monitoringData?.dataLoggings?.flatMap(dl => {
       const dates = [];
       if (dl.lastReading?.date) dates.push(toBerlinTime(dl.lastReading.date));
       if (dl.dataLogger?.lastCommunicationDate) dates.push(toBerlinTime(dl.dataLogger.lastCommunicationDate));
-      if (dates.length === 0) return null;
-      return new Date(Math.max(...dates.map(d => d.getTime())));
-    }).filter(d => d !== null) || [];
+      return dates;
+    }) || [];
 
     if (timestamps.length === 0) {
       return '#9ca3af'; // grau
     }
 
-    // Älteste der jüngsten Zeiten pro Logger bestimmen
-    const oldestRecent = new Date(Math.min(...timestamps.map(d => d.getTime())));
-    const diffMinutes = (now - oldestRecent) / (1000 * 60);
+    const mostRecent = new Date(Math.max(...timestamps.map(d => d.getTime())));
+    const diffMinutes = (now - mostRecent) / (1000 * 60);
 
     if (diffMinutes < 40) {
       return '#86efac'; // grün
