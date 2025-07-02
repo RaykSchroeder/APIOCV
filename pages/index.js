@@ -34,34 +34,41 @@ export default function Home() {
 
     const intervalId = setInterval(() => {
       fetchData();
-    }, 600000); // 10 Minuten
+    }, 600000);
 
     return () => clearInterval(intervalId);
   }, [apiKey]);
+
+  const toBerlinTime = (dateString) => {
+    if (!dateString) return null;
+    const utcDate = new Date(dateString);
+    const berlinString = utcDate.toLocaleString('en-US', { timeZone: 'Europe/Berlin' });
+    return new Date(berlinString);
+  };
 
   const getEquipmentColor = (eq) => {
     const now = new Date();
 
     const alarms = eq.monitoringData?.dataLoggings?.flatMap(dl => dl.ongoingAlarms || []) || [];
     if (alarms.length > 0) {
-      const oldestAlarmStart = Math.min(...alarms.map(alarm => new Date(alarm.startDate).getTime()));
+      const oldestAlarmStart = Math.min(...alarms.map(alarm => toBerlinTime(alarm.startDate).getTime()));
       const diffHours = (now - new Date(oldestAlarmStart)) / (1000 * 60 * 60);
       if (diffHours >= 24) {
-        return '#b91c1c'; // Tailwind red-700
+        return '#b91c1c'; // dunkelrot
       } else {
-        return '#fb923c'; // Tailwind orange-400
+        return '#fb923c'; // orange
       }
     }
 
     const timestamps = eq.monitoringData?.dataLoggings?.flatMap(dl => {
       const dates = [];
-      if (dl.lastReading?.date) dates.push(new Date(dl.lastReading.date));
-      if (dl.dataLogger?.lastCommunicationDate) dates.push(new Date(dl.dataLogger.lastCommunicationDate));
+      if (dl.lastReading?.date) dates.push(toBerlinTime(dl.lastReading.date));
+      if (dl.dataLogger?.lastCommunicationDate) dates.push(toBerlinTime(dl.dataLogger.lastCommunicationDate));
       return dates;
     }) || [];
 
     if (timestamps.length === 0) {
-      return '#9ca3af'; // Tailwind gray-400
+      return '#9ca3af'; // grau
     }
 
     const mostRecent = new Date(Math.max(...timestamps.map(d => d.getTime())));
@@ -69,47 +76,44 @@ export default function Home() {
     const diffHours = diffMinutes / 60;
 
     if (diffMinutes < 40) {
-      return '#86efac'; // Tailwind green-300
+      return '#86efac'; // grün
     } else if (diffHours < 24) {
-      return '#fb923c'; // Tailwind orange-400
+      return '#fb923c'; // orange
     } else {
-      return '#b91c1c'; // Tailwind red-700
+      return '#b91c1c'; // dunkelrot
     }
   };
 
   const sortedEquipments = (data || []).slice().sort((a, b) => {
-    const getLongestAlarmStart = (eq) => {
+    const getOldestAlarm = (eq) => {
       const alarms = eq.monitoringData?.dataLoggings?.flatMap(dl => dl.ongoingAlarms || []) || [];
       if (alarms.length === 0) return null;
-      return Math.min(...alarms.map(alarm => new Date(alarm.startDate).getTime()));
+      return Math.min(...alarms.map(alarm => toBerlinTime(alarm.startDate).getTime()));
     };
 
-    const aAlarmStart = getLongestAlarmStart(a);
-    const bAlarmStart = getLongestAlarmStart(b);
+    const aAlarm = getOldestAlarm(a);
+    const bAlarm = getOldestAlarm(b);
 
-    if (aAlarmStart && bAlarmStart) {
-      return aAlarmStart - bAlarmStart;
-    } else if (aAlarmStart) {
+    if (aAlarm && bAlarm) {
+      return aAlarm - bAlarm;
+    } else if (aAlarm) {
       return -1;
-    } else if (bAlarmStart) {
+    } else if (bAlarm) {
       return 1;
     }
 
-    const getMostRecentTimestamp = (eq) => {
+    const getMostRecent = (eq) => {
       const timestamps = eq.monitoringData?.dataLoggings?.flatMap(dl => {
         const dates = [];
-        if (dl.lastReading?.date) dates.push(new Date(dl.lastReading.date));
-        if (dl.dataLogger?.lastCommunicationDate) dates.push(new Date(dl.dataLogger.lastCommunicationDate));
+        if (dl.lastReading?.date) dates.push(toBerlinTime(dl.lastReading.date));
+        if (dl.dataLogger?.lastCommunicationDate) dates.push(toBerlinTime(dl.dataLogger.lastCommunicationDate));
         return dates;
       }) || [];
       if (timestamps.length === 0) return 0;
       return Math.max(...timestamps.map(d => d.getTime()));
     };
 
-    const aTime = getMostRecentTimestamp(a);
-    const bTime = getMostRecentTimestamp(b);
-
-    return bTime - aTime;
+    return getMostRecent(b) - getMostRecent(a);
   });
 
   return (
@@ -232,7 +236,7 @@ export default function Home() {
                     <ul style={{ paddingLeft: '1.5rem', marginTop: '0.25rem', color: '#b91c1c' }}>
                       {dl.ongoingAlarms.map(alarm => (
                         <li key={alarm.id}>
-                          Alarm seit {new Date(alarm.startDate).toLocaleString()}: {alarm.message || `${alarm.type} (Level ${alarm.level})`}
+                          Alarm seit {toBerlinTime(alarm.startDate).toLocaleString('de-DE')}: {alarm.message || `${alarm.type} (Level ${alarm.level})`}
                         </li>
                       ))}
                     </ul>
