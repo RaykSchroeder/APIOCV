@@ -64,26 +64,24 @@ export default function Home() {
       }
     }
 
-    // Kommunikation prüfen
-    const timestamps = eq.monitoringData?.dataLoggings?.flatMap(dl => {
-      const dates = [];
-      if (dl.lastReading?.date) dates.push(toBerlinTime(dl.lastReading.date));
-      if (dl.dataLogger?.lastCommunicationDate) dates.push(toBerlinTime(dl.dataLogger.lastCommunicationDate));
-      return dates;
-    }) || [];
+    // Kommunikation prüfen: jedes DataLogging einzeln betrachten
+    const dataLoggings = eq.monitoringData?.dataLoggings || [];
+    for (const dl of dataLoggings) {
+      const timestamps = [];
+      if (dl.lastReading?.date) timestamps.push(toBerlinTime(dl.lastReading.date));
+      if (dl.dataLogger?.lastCommunicationDate) timestamps.push(toBerlinTime(dl.dataLogger.lastCommunicationDate));
 
-    if (timestamps.length === 0) {
-      return '#9ca3af'; // grau
-    }
+      if (timestamps.length === 0) {
+        return '#b91c1c'; // dunkelrot, kein Timestamp
+      }
 
-    const mostRecent = new Date(Math.max(...timestamps.map(d => d.getTime())));
-    const diffMinutes = (now - mostRecent) / (1000 * 60);
+      const mostRecent = new Date(Math.max(...timestamps.map(d => d.getTime())));
+      const diffMinutes = (now - mostRecent) / (1000 * 60);
 
-    if (diffMinutes > 60) {
-      worstStatus = 'darkred';
-    } else if (diffMinutes > 40) {
-      if (worstStatus !== 'darkred') {
-        worstStatus = 'red';
+      if (diffMinutes > 60) {
+        return '#b91c1c'; // dunkelrot
+      } else if (diffMinutes > 40) {
+        worstStatus = worstStatus === 'darkred' ? 'darkred' : 'red';
       }
     }
 
