@@ -76,7 +76,7 @@ export default function Home() {
 
     if (diffMinutes < 40) {
       return '#86efac'; // grün
-    } else if (diffMinutes < 60 * 24) {
+    } else if (diffMinutes < 60 * 11) {
       return '#f97316'; // orange
     } else {
       return '#b91c1c'; // dunkelrot
