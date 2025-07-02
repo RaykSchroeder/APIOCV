@@ -34,14 +34,14 @@ export default function Home() {
 
     const intervalId = setInterval(() => {
       fetchData();
-    }, 600000);
+    }, 600000); // 10 Minuten
 
     return () => clearInterval(intervalId);
   }, [apiKey]);
 
   const toBerlinTime = (dateString) => {
     if (!dateString) return null;
-    const utcDate = new Date(dateString + 'Z');
+    const utcDate = new Date(dateString + 'Z'); // London Zeit → UTC
     const berlinString = utcDate.toLocaleString('en-US', { timeZone: 'Europe/Berlin' });
     return new Date(berlinString);
   };
@@ -49,17 +49,16 @@ export default function Home() {
   const getEquipmentColor = (eq) => {
     const now = new Date();
 
+    // Alarme prüfen
     const alarms = eq.monitoringData?.dataLoggings?.flatMap(dl => dl.ongoingAlarms || []) || [];
     if (alarms.length > 0) {
-      const oldestAlarmStart = Math.min(...alarms.map(alarm => toBerlinTime(alarm.startDate).getTime()));
-      const diffHours = (now - new Date(oldestAlarmStart)) / (1000 * 60 * 60);
-      if (diffHours >= 24) {
-        return '#b91c1c'; // dunkelrot
-      } else {
-        return '#fb923c'; // orange
-      }
+      const alarmStartTimes = alarms.map(alarm => toBerlinTime(alarm.startDate).getTime());
+      const oldestAlarm = Math.min(...alarmStartTimes);
+      const hoursSinceAlarm = (now - new Date(oldestAlarm)) / (1000 * 60 * 60);
+      return hoursSinceAlarm > 24 ? '#b91c1c' : '#f97316'; // rot oder orange
     }
 
+    // Timestamps sammeln
     const timestamps = eq.monitoringData?.dataLoggings?.flatMap(dl => {
       const dates = [];
       if (dl.lastReading?.date) dates.push(toBerlinTime(dl.lastReading.date));
@@ -77,32 +76,32 @@ export default function Home() {
 
     if (diffMinutes < 40) {
       return '#86efac'; // grün
-    } else if (diffHours < 24) {
-      return '#fb923c'; // orange
+    } else if (diffMinutes < 60 * 24) {
+      return '#f97316'; // orange
     } else {
       return '#b91c1c'; // dunkelrot
     }
   };
 
   const sortedEquipments = (data || []).slice().sort((a, b) => {
-    const getOldestAlarm = (eq) => {
+    const getOldestAlarmStart = (eq) => {
       const alarms = eq.monitoringData?.dataLoggings?.flatMap(dl => dl.ongoingAlarms || []) || [];
       if (alarms.length === 0) return null;
       return Math.min(...alarms.map(alarm => toBerlinTime(alarm.startDate).getTime()));
     };
 
-    const aAlarm = getOldestAlarm(a);
-    const bAlarm = getOldestAlarm(b);
+    const aAlarmStart = getOldestAlarmStart(a);
+    const bAlarmStart = getOldestAlarmStart(b);
 
-    if (aAlarm && bAlarm) {
-      return aAlarm - bAlarm;
-    } else if (aAlarm) {
+    if (aAlarmStart && bAlarmStart) {
+      return aAlarmStart - bAlarmStart;
+    } else if (aAlarmStart) {
       return -1;
-    } else if (bAlarm) {
+    } else if (bAlarmStart) {
       return 1;
     }
 
-    const getMostRecent = (eq) => {
+    const getMostRecentTimestamp = (eq) => {
       const timestamps = eq.monitoringData?.dataLoggings?.flatMap(dl => {
         const dates = [];
         if (dl.lastReading?.date) dates.push(toBerlinTime(dl.lastReading.date));
@@ -113,7 +112,10 @@ export default function Home() {
       return Math.max(...timestamps.map(d => d.getTime()));
     };
 
-    return getMostRecent(b) - getMostRecent(a);
+    const aTime = getMostRecentTimestamp(a);
+    const bTime = getMostRecentTimestamp(b);
+
+    return bTime - aTime;
   });
 
   return (
@@ -229,14 +231,24 @@ export default function Home() {
             <ul style={{ paddingLeft: '1.5rem', marginTop: '0.5rem' }}>
               {(selectedEquipment.monitoringData?.dataLoggings || []).map(dl => (
                 <li key={dl.id} style={{ marginBottom: '1rem' }}>
-                  <strong>{dl.name}</strong> — Letzte Messung: {dl.lastReading?.value} {dl.lastReading?.unit} am {dl.lastReading?.date}
+                  <strong>{dl.name}</strong> — Letzte Messung: {dl.lastReading?.value} {dl.lastReading?.unit} am {
+                    dl.lastReading?.date 
+                      ? toBerlinTime(dl.lastReading.date).toLocaleString('de-DE')
+                      : '–'
+                  }
                   <br />
-                  Letzte Kommunikation: {dl.dataLogger?.lastCommunicationDate || '–'}
+                  Letzte Kommunikation: {
+                    dl.dataLogger?.lastCommunicationDate
+                      ? toBerlinTime(dl.dataLogger.lastCommunicationDate).toLocaleString('de-DE')
+                      : '–'
+                  }
                   {dl.ongoingAlarms?.length > 0 && (
                     <ul style={{ paddingLeft: '1.5rem', marginTop: '0.25rem', color: '#b91c1c' }}>
                       {dl.ongoingAlarms.map(alarm => (
                         <li key={alarm.id}>
-                          Alarm seit {toBerlinTime(alarm.startDate).toLocaleString('de-DE')}: {alarm.message || `${alarm.type} (Level ${alarm.level})`}
+                          Alarm seit {
+                            toBerlinTime(alarm.startDate).toLocaleString('de-DE')
+                          }: {alarm.message || `${alarm.type} (Level ${alarm.level})`}
                         </li>
                       ))}
                     </ul>
