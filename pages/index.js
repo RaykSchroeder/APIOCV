@@ -81,7 +81,7 @@ export default function Home() {
       const mostRecent = new Date(Math.max(...timestamps.map(d => d.getTime())));
       const diffMinutes = (now - mostRecent) / (1000 * 60);
 
-      if (diffMinutes > 60) {
+      if (diffMinutes > 60*24) {
         return '#b91c1c'; // dunkelrot
       } else if (diffMinutes > 40) {
         worstStatus = worstStatus === 'darkred' ? 'darkred' : 'red';
