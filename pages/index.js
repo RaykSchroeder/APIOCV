@@ -41,7 +41,7 @@ export default function Home() {
 
   const toBerlinTime = (dateString) => {
     if (!dateString) return null;
-    const utcDate = new Date(dateString + 'Z'); // London Zeit → UTC
+    const utcDate = new Date(dateString + 'Z');
     const berlinString = utcDate.toLocaleString('en-US', { timeZone: 'Europe/Berlin' });
     return new Date(berlinString);
   };
@@ -59,27 +59,28 @@ export default function Home() {
     }
 
     // Timestamps sammeln
-    const timestamps = eq.monitoringData?.dataLoggings?.flatMap(dl => {
+    const timestamps = eq.monitoringData?.dataLoggings?.map(dl => {
       const dates = [];
       if (dl.lastReading?.date) dates.push(toBerlinTime(dl.lastReading.date));
       if (dl.dataLogger?.lastCommunicationDate) dates.push(toBerlinTime(dl.dataLogger.lastCommunicationDate));
-      return dates;
-    }) || [];
+      if (dates.length === 0) return null;
+      return new Date(Math.max(...dates.map(d => d.getTime())));
+    }).filter(d => d !== null) || [];
 
     if (timestamps.length === 0) {
       return '#9ca3af'; // grau
     }
 
-    const mostRecent = new Date(Math.max(...timestamps.map(d => d.getTime())));
-    const diffMinutes = (now - mostRecent) / (1000 * 60);
-    const diffHours = diffMinutes / 60;
+    // Älteste der jüngsten Zeiten pro Logger bestimmen
+    const oldestRecent = new Date(Math.min(...timestamps.map(d => d.getTime())));
+    const diffMinutes = (now - oldestRecent) / (1000 * 60);
 
     if (diffMinutes < 40) {
       return '#86efac'; // grün
-    } else if (diffMinutes < 60 * 1) {
+    } else if (diffMinutes < 60) {
       return '#f97316'; // orange
     } else {
-      return '#b91c1c'; // dunkelrot
+      return '#b91c1c'; // rot
     }
   };
 
