@@ -27,30 +27,32 @@ export default function Home() {
     }
   };
 
-  // useEffect für automatisches Nachladen alle 10 Minuten (600000 ms)
   useEffect(() => {
-    if (!apiKey) return; // Wenn kein apiKey gesetzt ist, nicht laden
+    if (!apiKey) return;
 
-    fetchData(); // Daten sofort laden beim Setzen des API Key
+    fetchData();
 
     const intervalId = setInterval(() => {
       fetchData();
-    }, 600000); // 600000ms = 10 Minuten
+    }, 600000); // 10 Minuten
 
-    return () => clearInterval(intervalId); // Clean-up beim Unmount oder Key-Änderung
+    return () => clearInterval(intervalId);
   }, [apiKey]);
-
-  // ... der Rest deines Codes bleibt gleich ...
-
 
   const getEquipmentColor = (eq) => {
     const now = new Date();
 
-    // Prüfen auf aktive Alarme (rot)
     const alarms = eq.monitoringData?.dataLoggings?.flatMap(dl => dl.ongoingAlarms || []) || [];
-    if (alarms.length > 0) return '#f87171'; // Tailwind red-400 hex
+    if (alarms.length > 0) {
+      const oldestAlarmStart = Math.min(...alarms.map(alarm => new Date(alarm.startDate).getTime()));
+      const diffHours = (now - new Date(oldestAlarmStart)) / (1000 * 60 * 60);
+      if (diffHours >= 24) {
+        return '#b91c1c'; // Tailwind red-700
+      } else {
+        return '#fb923c'; // Tailwind orange-400
+      }
+    }
 
-    // Alle relevanten Zeitstempel sammeln
     const timestamps = eq.monitoringData?.dataLoggings?.flatMap(dl => {
       const dates = [];
       if (dl.lastReading?.date) dates.push(new Date(dl.lastReading.date));
@@ -59,24 +61,22 @@ export default function Home() {
     }) || [];
 
     if (timestamps.length === 0) {
-      // Keine Zeitstempel - grau
-      return '#9ca3af'; // Tailwind gray-400 hex
+      return '#9ca3af'; // Tailwind gray-400
     }
 
-    // Jüngsten Zeitstempel finden
     const mostRecent = new Date(Math.max(...timestamps.map(d => d.getTime())));
-    const diffHours = (now - mostRecent) / (1000 * 60 * 60);
+    const diffMinutes = (now - mostRecent) / (1000 * 60);
+    const diffHours = diffMinutes / 60;
 
-    if (diffHours < 24) {
-      return '#86efac'; // Tailwind green-300 hex
-    } else if (diffHours < 48) {
-      return '#fde68a'; // Tailwind yellow-300 hex
+    if (diffMinutes < 40) {
+      return '#86efac'; // Tailwind green-300
+    } else if (diffHours < 24) {
+      return '#fb923c'; // Tailwind orange-400
     } else {
-      return '#9ca3af'; // Tailwind gray-400 hex
+      return '#b91c1c'; // Tailwind red-700
     }
   };
 
-  // Sortierung: Alarme (längster zuerst), dann normal, dann inaktiv
   const sortedEquipments = (data || []).slice().sort((a, b) => {
     const getLongestAlarmStart = (eq) => {
       const alarms = eq.monitoringData?.dataLoggings?.flatMap(dl => dl.ongoingAlarms || []) || [];
@@ -88,14 +88,13 @@ export default function Home() {
     const bAlarmStart = getLongestAlarmStart(b);
 
     if (aAlarmStart && bAlarmStart) {
-      return aAlarmStart - bAlarmStart; // Ältester Alarm zuerst
+      return aAlarmStart - bAlarmStart;
     } else if (aAlarmStart) {
-      return -1; // a hat Alarm, b nicht → a zuerst
+      return -1;
     } else if (bAlarmStart) {
-      return 1;  // b hat Alarm, a nicht → b zuerst
+      return 1;
     }
 
-    // Keine Alarme, jetzt normal vs. inaktiv nach Timestamp
     const getMostRecentTimestamp = (eq) => {
       const timestamps = eq.monitoringData?.dataLoggings?.flatMap(dl => {
         const dates = [];
@@ -110,7 +109,7 @@ export default function Home() {
     const aTime = getMostRecentTimestamp(a);
     const bTime = getMostRecentTimestamp(b);
 
-    return bTime - aTime; // Jüngste zuerst
+    return bTime - aTime;
   });
 
   return (
@@ -224,7 +223,7 @@ export default function Home() {
 
             <h3 style={{ marginTop: '1.5rem', fontWeight: '600' }}>Data Loggings:</h3>
             <ul style={{ paddingLeft: '1.5rem', marginTop: '0.5rem' }}>
-              {(selectedEquipment.monitoringData?.dataLoggings || selectedEquipment.dataLoggings || []).map(dl => (
+              {(selectedEquipment.monitoringData?.dataLoggings || []).map(dl => (
                 <li key={dl.id} style={{ marginBottom: '1rem' }}>
                   <strong>{dl.name}</strong> — Letzte Messung: {dl.lastReading?.value} {dl.lastReading?.unit} am {dl.lastReading?.date}
                   <br />
