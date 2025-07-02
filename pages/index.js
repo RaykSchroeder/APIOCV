@@ -34,7 +34,7 @@ export default function Home() {
 
     const intervalId = setInterval(() => {
       fetchData();
-    }, 600000); // 10 Minuten
+    }, 600000); // alle 10 Minuten
 
     return () => clearInterval(intervalId);
   }, [apiKey]);
@@ -48,6 +48,7 @@ export default function Home() {
 
   const getEquipmentColor = (eq) => {
     const now = new Date();
+    let worstStatus = 'green';
 
     // Alarme prüfen
     const alarms = eq.monitoringData?.dataLoggings?.flatMap(dl => dl.ongoingAlarms || []) || [];
@@ -57,32 +58,13 @@ export default function Home() {
       const hoursSinceAlarm = (now - new Date(oldestAlarm)) / (1000 * 60 * 60);
 
       if (hoursSinceAlarm > 24) {
-        return '#b91c1c'; // rot
-      }
-
-      // Kommunikation prüfen
-      const timestamps = eq.monitoringData?.dataLoggings?.flatMap(dl => {
-        const dates = [];
-        if (dl.lastReading?.date) dates.push(toBerlinTime(dl.lastReading.date));
-        if (dl.dataLogger?.lastCommunicationDate) dates.push(toBerlinTime(dl.dataLogger.lastCommunicationDate));
-        return dates;
-      }) || [];
-
-      if (timestamps.length === 0) {
-        return '#9ca3af'; // grau
-      }
-
-      const mostRecent = new Date(Math.max(...timestamps.map(d => d.getTime())));
-      const diffMinutes = (now - mostRecent) / (1000 * 60);
-
-      if (diffMinutes > 60) {
-        return '#b91c1c'; // rot wegen Kommunikation
+        worstStatus = 'darkred';
       } else {
-        return '#f97316'; // orange wegen Alarm aktiv
+        worstStatus = 'orange';
       }
     }
 
-    // KEIN Alarm → nur Kommunikation prüfen
+    // Kommunikation prüfen
     const timestamps = eq.monitoringData?.dataLoggings?.flatMap(dl => {
       const dates = [];
       if (dl.lastReading?.date) dates.push(toBerlinTime(dl.lastReading.date));
@@ -97,13 +79,18 @@ export default function Home() {
     const mostRecent = new Date(Math.max(...timestamps.map(d => d.getTime())));
     const diffMinutes = (now - mostRecent) / (1000 * 60);
 
-    if (diffMinutes < 40) {
-      return '#86efac'; // grün
-    } else if (diffMinutes < 60) {
-      return '#f97316'; // orange
-    } else {
-      return '#b91c1c'; // rot
+    if (diffMinutes > 60) {
+      worstStatus = 'darkred';
+    } else if (diffMinutes > 40) {
+      if (worstStatus !== 'darkred') {
+        worstStatus = 'red';
+      }
     }
+
+    if (worstStatus === 'darkred') return '#b91c1c';
+    if (worstStatus === 'red') return '#f43f5e';
+    if (worstStatus === 'orange') return '#f97316';
+    return '#86efac';
   };
 
   const sortedEquipments = (data || []).slice().sort((a, b) => {
