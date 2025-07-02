@@ -196,7 +196,7 @@ export default function Home() {
             >
               <h2 style={{ fontWeight: '700', marginBottom: '0.25rem' }}>{eq.name}</h2>
               {hasAlarm && (
-                <p style={{ color: '#b91c1c', fontWeight: '700', margin: 0 }}>⚠️ Alarm aktiv!</p>
+                <p style={{ color: '#9ca3af', fontWeight: '700', margin: 0 }}>⚠️ Alarm aktiv!</p>
               )}
               <p style={{ marginTop: 'auto', fontSize: '0.875rem', color: '#444' }}>
                 Topologie: {eq.topology?.name || '–'}
