@@ -47,7 +47,9 @@ export default function Home() {
   };
 
   const getEquipmentColor = (eq) => {
-    if (eq.status === 'inactive') return '#ccc';
+    if (!eq.monitoringData || !eq.monitoringData.dataLoggings || eq.monitoringData.dataLoggings.length === 0) {
+    return '#9ca3af'; // grau
+  }
     const now = new Date();
     let worstStatus = 'green';
 
