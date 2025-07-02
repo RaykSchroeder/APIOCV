@@ -41,7 +41,7 @@ export default function Home() {
 
   const toBerlinTime = (dateString) => {
     if (!dateString) return null;
-    const utcDate = new Date(dateString);
+    const utcDate = new Date(dateString + 'Z');
     const berlinString = utcDate.toLocaleString('en-US', { timeZone: 'Europe/Berlin' });
     return new Date(berlinString);
   };
