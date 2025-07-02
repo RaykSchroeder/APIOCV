@@ -47,6 +47,7 @@ export default function Home() {
   };
 
   const getEquipmentColor = (eq) => {
+    if (eq.status === 'inactive') return '#ccc';
     const now = new Date();
     let worstStatus = 'green';
 
