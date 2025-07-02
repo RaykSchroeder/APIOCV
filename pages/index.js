@@ -55,7 +55,7 @@ export default function Home() {
       const alarmStartTimes = alarms.map(alarm => toBerlinTime(alarm.startDate).getTime());
       const oldestAlarm = Math.min(...alarmStartTimes);
       const hoursSinceAlarm = (now - new Date(oldestAlarm)) / (1000 * 60 * 60);
-      return hoursSinceAlarm > 24 ? '#b91c1c' : '#f97316'; // rot oder orange
+      return hoursSinceAlarm > 1 ? '#b91c1c' : '#f97316'; // rot oder orange
     }
 
     // Timestamps sammeln
