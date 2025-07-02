@@ -1,47 +1,51 @@
-const getEquipmentColor = (eq) => {
-  const now = new Date();
-  let worstStatus = 'green';
+export default async function handler(req, res) {
+  const { key } = req.query;
 
-  // Prüfe Alarme
-  const alarms = eq.monitoringData?.dataLoggings?.flatMap(dl => dl.ongoingAlarms || []) || [];
-  if (alarms.length > 0) {
-    const alarmStartTimes = alarms.map(alarm => toBerlinTime(alarm.startDate).getTime());
-    const oldestAlarm = Math.min(...alarmStartTimes);
-    const hoursSinceAlarm = (now - new Date(oldestAlarm)) / (1000 * 60 * 60);
+  if (!key) {
+    return res.status(400).json({ error: 'API key is required' });
+  }
 
-    if (hoursSinceAlarm > 24) {
-      worstStatus = 'darkred'; // Schlimmster Fall
-    } else {
-      worstStatus = 'orange'; // Alarm aktiv (≤ 24 h)
+  try {
+    // Alle Equipments (inkl. inaktive)
+    const allResponse = await fetch('https://api-eu.oceaview.com/public/api/v1/equipments', {
+      headers: {
+        'X-API-KEY': key,
+        'Accept': 'application/json',
+      },
+    });
+
+    // Nur aktive Equipments
+    const activeResponse = await fetch('https://api-eu.oceaview.com/public/api/v1/equipments/monitoring', {
+      headers: {
+        'X-API-KEY': key,
+        'Accept': 'application/json',
+      },
+    });
+
+    const allData = await allResponse.json();
+    const activeData = await activeResponse.json();
+
+    if (!allResponse.ok) {
+      return res.status(allResponse.status).json({ error: allData.message || 'Upstream API error (all equipments)' });
     }
-  }
-
-  // Prüfe Kommunikation
-  const timestamps = eq.monitoringData?.dataLoggings?.flatMap(dl => {
-    const dates = [];
-    if (dl.lastReading?.date) dates.push(toBerlinTime(dl.lastReading.date));
-    if (dl.dataLogger?.lastCommunicationDate) dates.push(toBerlinTime(dl.dataLogger.lastCommunicationDate));
-    return dates;
-  }) || [];
-
-  if (timestamps.length === 0) {
-    return '#9ca3af'; // grau, keine Daten
-  }
-
-  const mostRecent = new Date(Math.max(...timestamps.map(d => d.getTime())));
-  const diffMinutes = (now - mostRecent) / (1000 * 60);
-
-  if (diffMinutes > 60) {
-    worstStatus = 'darkred';
-  } else if (diffMinutes > 40) {
-    if (worstStatus !== 'darkred' && worstStatus !== 'red') {
-      worstStatus = 'red';
+    if (!activeResponse.ok) {
+      return res.status(activeResponse.status).json({ error: activeData.message || 'Upstream API error (active equipments)' });
     }
-  }
 
-  // Farbe nach schlimmstem Status bestimmen
-  if (worstStatus === 'darkred') return '#b91c1c';
-  if (worstStatus === 'red') return '#f43f5e';
-  if (worstStatus === 'orange') return '#f97316';
-  return '#86efac';
-};
+    // IDs der aktiven Equipments sammeln
+    const activeIds = new Set(activeData.map(eq => eq.id));
+
+    // Alle Equipments anpassen: aktiv (true/false)
+    const combined = allData.map(eq => ({
+      ...eq,
+      isActive: activeIds.has(eq.id),
+      // Falls aktiv, ergänze die Monitoring-Daten aus activeData
+      monitoringData: activeData.find(aeq => aeq.id === eq.id) || null,
+    }));
+
+    return res.status(200).json(combined);
+  } catch (error) {
+    console.error('Fetch failed in API route:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+}
