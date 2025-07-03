@@ -61,7 +61,7 @@ export default function Home() {
       const hoursSinceAlarm = (now - new Date(oldestAlarm)) / (1000 * 60 * 60);
 
       if (hoursSinceAlarm > 24) {
-        worstStatus = 'darkred';
+        worstStatus = 'red';
       } else {
         worstStatus = 'orange';
       }
